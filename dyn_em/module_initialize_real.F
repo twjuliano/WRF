@@ -215,8 +215,8 @@ integer::oops1,oops2
          END IF
 
          ! PSH
-         IF ( ( config_flags%sf_bathymetry      .EQ. 1           ) .AND. ( flag_bathymetry .EQ. 0 ) ) THEN
-            CALL wrf_message ( '----- ERROR: sf_bathymetry      = 1 AND flag_bathymetry = 0 ' )
+         IF ( ( config_flags%use_bathymetry      .EQ. 1           ) .AND. ( flag_bathymetry .EQ. 0 ) ) THEN
+            CALL wrf_message ( '----- ERROR: use_bathymetry      = 1 AND flag_bathymetry = 0 ' )
             geogrid_flag_error = geogrid_flag_error + 1
          END IF
          ! END PSH
@@ -322,7 +322,7 @@ integer::oops1,oops2
       END IF
 
       ! PSH
-      IF ( grid%sf_bathymetry   .EQ. 1 ) THEN
+      IF ( grid%use_bathymetry   .EQ. 1 ) THEN
          grid%bathymetry_flag = flag_bathymetry
          IF ( flag_bathymetry .EQ. 0 ) THEN
             CALL wrf_message ( " Warning: Please rerun WPS to get bathymetry information for surface model" )
