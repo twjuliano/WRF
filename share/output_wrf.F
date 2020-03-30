@@ -39,7 +39,7 @@
     INTEGER km_opt, diff_opt, damp_opt,  &
             mp_physics, ra_lw_physics, ra_sw_physics, sf_sfclay_physics, &
             sf_surface_physics, bl_pbl_physics, cu_physics, hypsometric_opt, sf_lake_physics, &
-            use_theta_m, use_maxw_level, use_trop_level,hybrid_opt, gwd_opt, sf_bathymetry !PSH
+            use_theta_m, use_maxw_level, use_trop_level,hybrid_opt, gwd_opt, use_bathymetry !PSH
     INTEGER swint_opt, aer_type,aer_aod550_opt,aer_angexp_opt,aer_ssa_opt,aer_asy_opt, aer_opt
     REAL    aer_aod550_val,aer_angexp_val,aer_ssa_val,aer_asy_val,etac
     REAL    khdif, kvdif, swrad_scat, dampcoef,radt,bldt,cudt
@@ -158,7 +158,7 @@
     call nl_get_aer_asy_val        ( grid%id,  aer_asy_val        )
     call nl_get_sf_lake_physics    ( grid%id,  sf_lake_physics    )
     ! PSH
-    call nl_get_sf_bathymetry      ( grid%id,  sf_bathymetry      )
+    call nl_get_use_bathymetry      ( grid%id,  use_bathymetry      )
 
 #if (EM_CORE == 1)
     dt = grid%dt
@@ -650,8 +650,8 @@ endif
     ibuf(1) = sf_lake_physics
     CALL wrf_put_dom_ti_integer ( fid , 'SF_LAKE_PHYSICS' ,  ibuf , 1 , ierr )
     ! PSH
-    ibuf(1) = sf_bathymetry  
-    CALL wrf_put_dom_ti_integer ( fid , 'SF_BATHYMETRY' ,  ibuf , 1 , ierr )
+    ibuf(1) = use_bathymetry  
+    CALL wrf_put_dom_ti_integer ( fid , 'USE_BATHYMETRY' ,  ibuf , 1 , ierr )
 
     ! added netcdf-specific metadata:
     IF ( ( use_package( io_form ) == IO_NETCDF ) .OR. &
