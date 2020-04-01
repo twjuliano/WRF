@@ -1993,6 +1993,7 @@ CONTAINS
                  ustt,                                               & ! DME-MMC
                  molt,                                               & ! DME-MMC
                  ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,                &
+                 use_bathymetry,water_depth,                         & ! PSH
                  sf_surface_physics                                 )
                                                                      
          ELSE
@@ -5498,6 +5499,7 @@ CONTAINS
                      ustt,                                         & ! DME-MMC
                      molt,                                         & ! DME-MMC
                      ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
+                     use_bathymetry,water_depth,                   & ! PSH
                      sf_surface_physics                            )
      
      USE module_sf_sfclayrev
@@ -5577,6 +5579,8 @@ CONTAINS
                INTENT(INOUT)   ::                            ustm
 
      INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX,IZ0TLND
+     INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
+     REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ) , INTENT(IN ) :: water_depth ! PSH
 
 !--------------------------------------------------------------------
 !    New for wrapper
