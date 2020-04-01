@@ -444,6 +444,7 @@ CONTAINS
 ! .... paj ...
 !
       REAL    :: zolzz,zol0
+      REAL    :: depth,depth_b ! PSH
 !     REAL    :: zolri,zolri2
 !     REAL    :: psih_stable,psim_stable,psih_unstable,psim_unstable
 !     REAL    :: psih_stable_full,psim_stable_full,psih_unstable_full,psim_unstable_full
@@ -1046,8 +1047,22 @@ CONTAINS
       DO 360 I=its,ite
         IF((XLAND(I)-1.5).GE.0)THEN                                            
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
+! PSH - formulation for depth-dependent roughness from
+! ... Jimenez and Dudhia, 2018
+          IF ( use_bathymetry .eq. 1 ) THEN
+            depth = water_depth(I) 
+            IF ( depth .lt. 10.0 ) THEN
+              depth = 10.0 
+            ELSEIF ( depth .gt. 100.0 ) THEN
+              depth = 100.0
+            ENDIF
+              
+            depth_b = 1 / 30.0 * log (1260.0 / depth)
+            ZNT(I)= exp((2.7 * UST(I) - 1.8 / depth_b) / (UST(I) + 0.17 / depth_b) )
+          ELSE
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
-          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+              ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+          ENDIF
 ! V3.9: Add limit as in isftcflx = 1,2
           ZNT(I)=MIN(ZNT(I),2.85e-3)
 ! COARE 3.5 (Edson et al. 2013)
