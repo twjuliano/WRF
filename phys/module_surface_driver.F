@@ -1354,9 +1354,9 @@ CONTAINS
                                                                                tkmg3d,         &
                                                                                tkdry3d,        &
                                                                                tksatu3d
-    real,    dimension(ims:ime,jms:jme ),intent(in)                         :: lakedepth2d
     INTEGER , OPTIONAL , INTENT(IN)                            :: use_bathymetry ! PSH
     real, OPTIONAL , dimension(ims:ime,jms:jme ),intent(in)    :: water_depth ! PSH
+    real,    dimension(ims:ime,jms:jme ),intent(in)                         :: lakedepth2d
 #if (EM_CORE==1)
     real ,    dimension(ims:ime,jms:jme )  ::  lakemask       
 !    INTEGER  :: lakeflag
@@ -2014,7 +2014,9 @@ CONTAINS
                itimestep,                                          & ! DME-MMC
                ustt,                                               & ! DME-MMC
                molt,                                               & ! DME-MMC
-               ustm,ck,cka,cd,cda,isftcflx,iz0tlnd, scm_force_flux    )
+               ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,                &
+               use_bathymetry,water_depth,                         & ! PSH
+               scm_force_flux                                      )
                                                                       
 #if ( EM_CORE==1)
            DO j = j_start(ij),j_end(ij)
@@ -5764,7 +5766,8 @@ CONTAINS
                  itimestep,                                    & ! DME-MMC
                  ustt,                                         & ! DME-MMC
                  molt,                                         & ! DME-MMC
-                 ustm,ck,cka,cd,cda,isftcflx,iz0tlnd          )
+                 ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
+                 use_bathymetry,water_depth                    ) ! PSH
      
 !
 !Restore land-point values calculated by SSiB (fds 12/2010)
@@ -5861,7 +5864,8 @@ CONTAINS
                  itimestep,                                    & ! DME-MMC
                  ustt,                                         & ! DME-MMC
                  molt,                                         & ! DME-MMC
-                 ustm_sea,ck_sea,cka_sea,cd_sea,cda_sea,isftcflx,iz0tlnd )
+                 ustm_sea,ck_sea,cka_sea,cd_sea,cda_sea,isftcflx,iz0tlnd, &
+                 use_bathymetry,water_depth                    ) ! PSH
     
 !
      DO j = JTS , JTE
