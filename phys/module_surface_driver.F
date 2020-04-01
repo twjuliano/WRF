@@ -90,6 +90,7 @@ CONTAINS
 #if (EM_CORE==1)
      &          ,ch,fgdp,dfgdp,vdfg,grav_settling                       & ! Katata - fog dep
 #endif
+     &          ,use_bathymetry,water_depth                             & ! PSH
      &          ,lakedepth2d,  savedtke12d,  snowdp2d,   h2osno2d       & !lake
      &          ,snl2d,        t_grnd2d,     t_lake3d,   lake_icefrac3d & !lake
      &          ,z_lake3d,     dz_lake3d,    t_soisno3d, h2osoi_ice3d   & !lake
@@ -1354,6 +1355,8 @@ CONTAINS
                                                                                tkdry3d,        &
                                                                                tksatu3d
     real,    dimension(ims:ime,jms:jme ),intent(in)                         :: lakedepth2d
+    INTEGER , OPTIONAL , INTENT(IN)                            :: use_bathymetry ! PSH
+    real, OPTIONAL , dimension(ims:ime,jms:jme ),intent(in)    :: water_depth ! PSH
 #if (EM_CORE==1)
     real ,    dimension(ims:ime,jms:jme )  ::  lakemask       
 !    INTEGER  :: lakeflag
