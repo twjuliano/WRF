@@ -427,8 +427,19 @@ SUBROUTINE calc_ts( grid )
             DO k=1,grid%max_ts_level
             grid%ts_u_profile(n,i,k)   = earth_u_profile(k)
             grid%ts_v_profile(n,i,k)   = earth_v_profile(k)
-            grid%ts_w_profile(n,i,k)   = (grid%w_2(ix,k,iy)+grid%w_2(ix,k+1,iy))/2.0 ! w on cell center
-            grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 
+
+
+!PSH
+            IF (config_flags%tslist_unstagger_winds) THEN
+                grid%ts_w_profile(n,i,k)   = (grid%w_2(ix,k,iy)+grid%w_2(ix,k+1,iy))/2.0 ! w on half levels
+                grid%ts_gph_profile(n,i,k) = ((grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 + &
+                                              (grid%phb(ix,k+1,iy)+grid%ph_2(ix,k+1,iy))/9.81)/2.0 ! z on half levels
+            ELSE
+                grid%ts_w_profile(n,i,k)   = grid%w_2(ix,k,iy) ! w on full levels
+                grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 ! z on full levels 
+            END IF
+
+
             IF (grid%use_theta_m == 1) THEN
                grid%ts_th_profile(n,i,k)  = (grid%t_2(ix,k,iy) + T0)/(1.+R_v/R_d*grid%moist(ix,k,iy,P_QV))
             ELSE
