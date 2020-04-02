@@ -431,12 +431,12 @@ SUBROUTINE calc_ts( grid )
 
 !PSH
             IF (config_flags%tslist_unstagger_winds) THEN
-                grid%ts_w_profile(n,i,k)   = (grid%w_2(ix,k,iy)+grid%w_2(ix,k+1,iy))/2.0 ! w on cell center
+                grid%ts_w_profile(n,i,k)   = (grid%w_2(ix,k,iy)+grid%w_2(ix,k+1,iy))/2.0 ! w on half levels
                 grid%ts_gph_profile(n,i,k) = ((grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 + &
-                                              (grid%phb(ix,k+1,iy)+grid%ph_2(ix,k+1,iy))/9.81)/2.0 ! z on cell center
+                                              (grid%phb(ix,k+1,iy)+grid%ph_2(ix,k+1,iy))/9.81)/2.0 ! z on half levels
             ELSE
-                grid%ts_w_profile(n,i,k)   = grid%w_2(ix,k,iy) ! w on cell center
-                grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 
+                grid%ts_w_profile(n,i,k)   = grid%w_2(ix,k,iy) ! w on full levels
+                grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 ! z on full levels 
             END IF
 
 
