@@ -436,7 +436,7 @@ SUBROUTINE calc_ts( grid )
                                               (grid%phb(ix,k+1,iy)+grid%ph_2(ix,k+1,iy))/9.81)/2.0 ! z on cell center
             ELSE
                 grid%ts_w_profile(n,i,k)   = grid%w_2(ix,k,iy) ! w on cell face
-                grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 ! z on cell center
+                grid%ts_gph_profile(n,i,k) = (grid%phb(ix,k,iy)+grid%ph_2(ix,k,iy))/9.81 ! z on cell face
             END IF
 
 
