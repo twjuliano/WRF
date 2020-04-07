@@ -563,6 +563,7 @@ BENCH_START(surf_driver_tim)
      &        ,HUML=grid%huml, HVML=grid%hvml, F=grid%f                             &
      &        ,TMOML=grid%TMOML,ISWATER=iswater                                     &
      &        ,OML_RELAXATION_TIME=grid%OML_RELAXATION_TIME                         &
+     &        ,use_bathymetry=config_flags%use_bathymetry,water_depth=grid%water_depth & !PSH
      &        ,lakedepth2d=grid%lakedepth2d,    savedtke12d=grid%savedtke12d        &   
      &        ,snowdp2d=grid%snowdp2d,          h2osno2d=grid%h2osno2d              & !lake
      &        ,snl2d=grid%snl2d,                t_grnd2d=grid%t_grnd2d              &   
