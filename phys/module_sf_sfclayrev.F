@@ -24,12 +24,6 @@ CONTAINS
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
-                     spec_hfx,                                     & !JDM-MMC
-                     spec_z0,                                      & ! DME-MMC
-                     spec_ideal,                                   & ! DME-MMC
-                     itimestep,                                    & ! DME-MMC
-                     ustt,                                         & ! DME-MMC
-                     molt,                                         & ! DME-MMC
                      ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,scm_force_flux )
      
 !-------------------------------------------------------------------
@@ -191,16 +185,6 @@ CONTAINS
                                                               QGH
                                     
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
-
-      REAL,     INTENT(IN   )            ::   spec_hfx        !JDM-MMC
-
-      REAL,     INTENT(IN   )            ::   spec_z0         ! DME-MMC
-
-      LOGICAL,  INTENT(IN   )            ::   spec_ideal      ! DME-MMC
-
-      INTEGER,  INTENT(IN   )            ::   itimestep       ! DME-MMC
-
-      REAL,     DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)   ::   ustt,molt ! DME-MMC
       
       REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme )              , &
                 INTENT(OUT)     ::                  ck,cka,cd,cda
@@ -222,38 +206,7 @@ CONTAINS
       REAL,     DIMENSION( its:ite ) ::                    dz8w1d
 
       INTEGER ::  I,J
-
-      REAL :: dth_i, thx_i ! DME-MMC
-
-! DME-MMC modifications to set z0 and properly calculate TSK from an imposed heat flux (spec_hfx, W m-2)
-      IF ( spec_ideal ) THEN
-        DO J=jts,jte
-          DO I=its,ite
-            ust(i,j) = ustt(i,j)
-            mol(i,j) = molt(i,j)
-            znt(i,j) = spec_z0
-          ENDDO
-        ENDDO
-        IF (itimestep .ne. 1) THEN
-          DO J=jts,jte
-            DO I=its,ite
-              IF (spec_hfx .eq. 0.) THEN
-                dth_i = 0.
-                thx_i = t3d(i,1,j)*(P1000mb/p3d(i,1,j))**rovcp
-                tsk(i,j) = (dth_i + thx_i)/(P1000mb/(psfc(i,j)))**rovcp
-              ELSEIF (flhc(i,j) .ne. 0. ) THEN
-                dth_i = spec_hfx/flhc(i,j)
-                thx_i = t3d(i,1,j)*(P1000mb/p3d(i,1,j))**rovcp
-                tsk(i,j) = (dth_i + thx_i)/(P1000mb/(psfc(i,j)))**rovcp
-              ELSE
-                ! do nothing, flhc(i,j) = 0.0...
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDIF
-      ENDIF
-! DME-MMC
-
+    
       DO J=jts,jte
         DO i=its,ite
           dz8w1d(I) = dz8w(i,1,j)
@@ -293,16 +246,6 @@ CONTAINS
 #endif
                                                                     )
       ENDDO
-
-      IF ( spec_ideal ) THEN ! DME-MMC
-        DO J=jts,jte
-          DO I=its,ite
-            ustt(i,j) = ust(i,j)
-            molt(i,j) = mol(i,j)
-          ENDDO
-        ENDDO
-      ENDIF
-
 
    END SUBROUTINE SFCLAYREV
 
@@ -379,7 +322,6 @@ CONTAINS
                 INTENT(OUT)     ::                        U10,V10, &
                                                 TH2,T2,Q2,QSFC,LH
 
-                                    
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
 
 ! MODULE-LOCAL VARIABLES, DEFINED IN SUBROUTINE SFCLAY
@@ -995,11 +937,13 @@ CONTAINS
            ENDIF
         ENDIF
 ! TO PREVENT OSCILLATIONS AVERAGE WITH OLD VALUE 
-        UST(I)=0.5*UST(I)+0.5*KARMAN*WSPD(I)/PSIX                                             
+! JDM ORIG        UST(I)=0.5*UST(I)+0.5*KARMAN*WSPD(I)/PSIX   ! JDM ORIG                                           
+            UST(I)=KARMAN*WSPD(I)/PSIX   !JDM 
 ! TKE coupling: compute ust without vconv for use in tke scheme
         WSPDI(I)=SQRT(UX(I)*UX(I)+VX(I)*VX(I))
         IF ( PRESENT(USTM) ) THEN
-        USTM(I)=0.5*USTM(I)+0.5*KARMAN*WSPDI(I)/PSIX
+!JDM ORIG       USTM(I)=0.5*USTM(I)+0.5*KARMAN*WSPDI(I)/PSIX
+            USTM(I)=KARMAN*WSPDI(I)/PSIX   !JDM
         ENDIF
 
         U10(I)=UX(I)*PSIX10/PSIX                                    

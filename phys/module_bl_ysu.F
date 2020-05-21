@@ -1763,7 +1763,7 @@ contains
 
       wt=.5*TANH((zi - sbl_lim)/sbl_damp) + .5
       zi=PBLH_TKE*(1.-wt) + zi*wt
-
+      
    END SUBROUTINE GET_PBLH
 ! ==================================================================
 
