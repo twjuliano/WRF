@@ -1059,12 +1059,13 @@ CONTAINS
               
             depth_b = 1 / 30.0 * log (1260.0 / depth)
             ZNT(I)= exp((2.7 * UST(I) - 1.8 / depth_b) / (UST(I) + 0.17 / depth_b) )
+            ZNT(I)=MIN(ZNT(I),0.1)    
           ELSE
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
               ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+              ZNT(I)=MIN(ZNT(I),2.85e-3)
           ENDIF
 ! V3.9: Add limit as in isftcflx = 1,2
-          ZNT(I)=MIN(ZNT(I),2.85e-3)
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
 !         CZC = min(CZC,0.028)
