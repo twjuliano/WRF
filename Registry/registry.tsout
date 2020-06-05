@@ -20,3 +20,13 @@ state    real   usts     ij     misc    1    -    h3    "usts"     "surface u* a
 state    real   z0ts     ij     misc    1    -    h3    "z0ts"     "z0 at eta point"                        "m"
 
 rconfig    integer   tsout_opt    namelist,dynamics    max_domains    0    h3    "tsout_opt"    "1 to enable timeseries output"    " "
+
+#state   real    u_slice              ij      misc          1                X  h  "u_slice"  " " #MMC
+#state   real    v_slice              ij      misc          1                Y  h  "v_slice"  " " #MMC
+#state   real    w_slice              ij      misc          1                Z  h  "w_slice"  " " #MMC
+state   real    u_slice              ij      misc          1                -  h  "u_slice"  " " #MMC
+state   real    v_slice              ij      misc          1                -  h  "v_slice"  " " #MMC
+state   real    w_slice              ij      misc          1                -  h  "w_slice"  " " #MMC
+state   real    t_slice              ij      misc          1                -  h  "t_slice"  " " #MMC
+
+rconfig real    slice_height    namelist,dynamics   max_domains     0.0       - " " #MMC
