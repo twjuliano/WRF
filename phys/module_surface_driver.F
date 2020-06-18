@@ -17,9 +17,12 @@ CONTAINS
      &          ,ifndalbsi, ifndicedepth, ifndsnowsi                  &
      &          ,isltyp,itimestep,julian_in,ivgtyp,lowlyr,mavail,rmol &
      &          ,num_soil_layers,p8w,pblh,pi_phy,pshltr,fm,fhh,psih   &
-     &          ,spec_hfx                                             & !JDM-MMC
-     &          ,spec_z0                                              & ! DME-MMC
      &          ,spec_ideal                                           & ! DME-MMC
+     &          ,spec_hfx                                             & ! JDM-MMC
+     &          ,spec_sf_heatrate                                     & ! DME-MMC
+     &          ,spec_z0                                              & ! DME-MMC
+     &          ,spec_dumvar_1                                        & ! JDM-MMC
+     &          ,spec_dumvar_2                                        & ! JDM-MMC
      &          ,ustt                                                 & ! DME-MMC
      &          ,molt                                                 & ! DME-MMC
 #if (NMM_CORE==1)
@@ -138,7 +141,7 @@ CONTAINS
 #ifdef CN
 !ADD_NEW_VAR for crop and cn
      &           ,dyntlai,dyntsai,dyntop,dynbot                              &
-     &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
+e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
      &           ,grainc_xfer,grainn,grainn_storage,grainn_xfer,days_active  &
      &           ,onset_flag,onset_counter,onset_gddflag,onset_fdd,onset_gdd &
      &           ,onset_swi,offset_flag,offset_counter,offset_fdd,offset_swi &
@@ -370,7 +373,8 @@ CONTAINS
 #endif
    USE module_sf_scmflux       
    USE module_sf_scmskintemp
-
+   USE module_sf_spec_ideal_tsk
+   
 #if ( NMM_CORE == 1 )
    USE module_sf_gfdl
 #endif
@@ -1169,11 +1173,13 @@ CONTAINS
    REAL,OPTIONAL, INTENT(IN   ) :: hfx_force_tend,lh_force_tend,tsk_force_tend
 
 
-   LOGICAL, INTENT(IN ) :: spec_ideal ! Flag to activate idealized spec_hfx and spec_z0 ! DME-MMC
-   REAL,    INTENT(IN ) :: spec_hfx   ! Constant surface heat flux (W/m^2) for use with sf_sfclay_physics=1 and spec_ideal_sfclay=.true. !JDM-MMC
-   REAL,    INTENT(IN ) :: spec_z0    ! Constant roughness length (m) for use with sf_sfclay_physics=1 and spec_ideal_sfclay=.true. ! DME-MMC
+   INTEGER, INTENT(IN ) :: spec_ideal ! Flag to activate idealized spec_hfx and spec_z0 ! DME-MMC, JDM
+   REAL,    INTENT(IN ) :: spec_hfx   ! Constant surface heat flux (W/m^2) for use with sf_sfclay_physics=1 and spec_ideal .GT. 0 !JDM-MMC
+   REAL,    INTENT(IN ) :: spec_z0    ! Constant roughness length (m) for use with sf_sfclay_physics=1 and spec_ideal .GT. 0 ! DME-MMC
+   REAL,    INTENT(IN ) :: spec_sf_heatrate   ! Constant surface heating rate (K/hr) for use with sf_sfclay_physics=1 and spec_ideal .GT.0 ! DME-JDM
+   REAL,    INTENT(INOUT) :: spec_dumvar_1   ! dummy variable for use with sf_sfclay_physics=1 and spec_ideal .GT. 0 ! DME-JDM
+   REAL,    INTENT(INOUT) :: spec_dumvar_2   ! dummy variable for use with sf_sfclay_physics=1 and spec_ideal .GT. 0 ! DME-JDM
    REAL,    DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   USTT, MOLT ! DME-MMC
-   
 !  LOCAL  VAR
 
    REAL,       DIMENSION( ims:ime, kms:kme, jms:jme ) ::v_phytmp
@@ -1395,6 +1401,7 @@ CONTAINS
    INTEGER                                             ::   spp_lsm_loc
 
    real,    optional,  dimension(ims:ime,jms:jme ),intent(inout) :: XLAIDYN
+
 !
 !------------------------------------------------------------------
 ! Initialize local variables
@@ -1855,7 +1862,6 @@ CONTAINS
 
 ! SAVE OLD VALUES
 
-
      !$OMP PARALLEL DO   &
      !$OMP PRIVATE ( ij, i, j, k )
      DO ij = 1 , num_tiles
@@ -1876,6 +1882,89 @@ CONTAINS
      ENDDO
      !$OMP END PARALLEL DO
 
+
+
+     IF ( spec_ideal .GT. 0 ) THEN
+     ! JDM idealzed surface temperature forcing  --Begin
+     
+        !$OMP PARALLEL DO   &
+        !$OMP PRIVATE ( ij, i, j, k )
+        DO ij = 1 , num_tiles
+       
+           CALL SET_MOL_UST_Z0(ids,ide, jds,jde, kds,kde,                             &
+                               ims,ime, jms,jme, kms,kme,                             & 
+                               i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte, &
+                               znt,                                                   & 
+                               spec_z0,                                               & 
+                               ust,mol,                                               & ! Restart bug 
+                               ustt,molt                                              ) ! DME
+
+        ENDDO
+        !$OMP END PARALLEL DO     
+
+        IF ( spec_ideal .EQ. 1 ) THEN !Compute local TSK from local THX, FLHC, etc.
+        
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij, i, j, k )
+           DO ij = 1 , num_tiles
+        
+              CALL SPEC_IDEAL_TSK_HFX_LOC(tsk,                                                   & 
+                                          flhc,t_phy,                                            & 
+                                          p_phy,psfc,                                            & 
+                                          P1000mb,rcp,                                           & 
+                                          spec_hfx,                                              &
+                                          spec_sf_heatrate,                                      &
+                                          dt,                                                    & 
+                                          spec_dumvar_2,                                         &
+                                          ids,ide, jds,jde, kds,kde,                             &
+                                          ims,ime, jms,jme, kms,kme,                             & 
+                                          i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte  )
+        
+           ENDDO
+           !$OMP END PARALLEL DO
+
+        ENDIF
+     
+        IF ( spec_ideal .EQ. 2 ) THEN !Compute horizontal domain average TSK from average THX, FLHC, etc.
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij, i, j, k )
+           DO ij = 1 , num_tiles
+           
+              CALL SPEC_IDEAL_TSK_HFX_MEAN(tsk,hfx,                                               & 
+                                           flhc,t_phy,                                            & 
+                                           p_phy,psfc,                                            & 
+                                           P1000mb,rcp,                                           & 
+                                           spec_hfx,                                              &
+                                           spec_sf_heatrate,                                      &
+                                           dt,                                                    & 
+                                           spec_dumvar_1,                                         &
+                                           spec_dumvar_2,                                         &
+                                           ids,ide, jds,jde, kds,kde,                             &
+                                           ims,ime, jms,jme, kms,kme,                             & 
+                                           i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte  )
+
+
+           ENDDO
+           !$OMP END PARALLEL DO
+
+        ENDIF
+     
+        !$OMP PARALLEL DO   &
+        !$OMP PRIVATE ( ij, i, j, k )
+        DO ij = 1 , num_tiles
+        
+           CALL SET_MOLT_USTT(ids,ide, jds,jde, kds,kde,                             &
+                              ims,ime, jms,jme, kms,kme,                             & 
+                              i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte, &
+                              ust,mol,                                               & 
+                              ustt,molt                                              ) 
+  
+        ENDDO
+        !$OMP END PARALLEL DO
+
+     ENDIF ! spec_ideal .GT 0
+     
      !$OMP PARALLEL DO   &
      !$OMP PRIVATE ( ij, i, j, k )
      DO ij = 1 , num_tiles
@@ -1987,11 +2076,6 @@ CONTAINS
                  ids,ide, jds,jde, kds,kde,                          &
                  ims,ime, jms,jme, kms,kme,                          &
                  i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte,    &
-                 spec_hfx,                                           &   !JDM-MMC            
-                 spec_z0,                                            & ! DME-MMC
-                 spec_ideal,                                         & ! DME-MMC
-                 ustt,                                               & ! DME-MMC
-                 molt,                                               & ! DME-MMC
                  ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,                &
                  use_bathymetry,water_depth,                         & ! PSH
                  sf_surface_physics                                 )
@@ -5495,11 +5579,6 @@ CONTAINS
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
-                     spec_hfx,                                     &    !JDM-MMC
-                     spec_z0,                                      & ! DME-MMC
-                     spec_ideal,                                   & ! DME-MMC
-                     ustt,                                         & ! DME-MMC
-                     molt,                                         & ! DME-MMC
                      ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
                      use_bathymetry,water_depth,                   & ! PSH
                      sf_surface_physics                            )
@@ -5609,12 +5688,6 @@ CONTAINS
                                                 QSFC_SEA,         &
                                                 ZNT_SEA
 
-     REAL,     INTENT(IN)               ::      spec_hfx          !JDM-MMC
-     REAL,     INTENT(IN)               ::      spec_z0           ! DME-MMC
-     LOGICAL,  INTENT(IN)               ::      spec_ideal        ! DME-MMC
-     REAL,    DIMENSION( ims:ime, jms:jme ) , INTENT(INOUT)::   ustt, molt ! DME-MMC
-
-     
 !--------------------------------------------------------------------
 !    Local
 !--------------------------------------------------------------------
