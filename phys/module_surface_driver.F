@@ -2092,12 +2092,6 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                ids,ide, jds,jde, kds,kde,                          &
                ims,ime, jms,jme, kms,kme,                          &
                i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte, &
-               spec_hfx,                                              &   !JDM-MMC            
-               spec_z0,                                            & ! DME-MMC
-               spec_ideal,                                         & ! DME-MMC
-               itimestep,                                          & ! DME-MMC
-               ustt,                                               & ! DME-MMC
-               molt,                                               & ! DME-MMC
                ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,                &
                use_bathymetry,water_depth,                         & ! PSH
                scm_force_flux                                      )
@@ -5833,12 +5827,6 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                  ids,ide, jds,jde, kds,kde,                    &
                  ims,ime, jms,jme, kms,kme,                    &
                  its,ite, jts,jte, kts,kte,                    &
-                 spec_hfx,                                     &   !JDM-MMC
-                 spec_z0,                                      & ! DME-MMC
-                 spec_ideal,                                   & ! DME-MMC
-                 itimestep,                                    & ! DME-MMC
-                 ustt,                                         & ! DME-MMC
-                 molt,                                         & ! DME-MMC
                  ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
                  use_bathymetry,water_depth                    ) ! PSH
      
@@ -5931,12 +5919,6 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                  ids,ide, jds,jde, kds,kde,                    &
                  ims,ime, jms,jme, kms,kme,                    &
                  its,ite, jts,jte, kts,kte,                    & ! 0
-                 spec_hfx,                                     &            !JDM-MMC
-                 spec_z0,                                      & ! DME-MMC
-                 spec_ideal,                                   & ! DME-MMC
-                 itimestep,                                    & ! DME-MMC
-                 ustt,                                         & ! DME-MMC
-                 molt,                                         & ! DME-MMC
                  ustm_sea,ck_sea,cka_sea,cd_sea,cda_sea,isftcflx,iz0tlnd, &
                  use_bathymetry,water_depth                    ) ! PSH
     
