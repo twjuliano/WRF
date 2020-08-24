@@ -2174,6 +2174,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                 chs,chs2,cqs2,hfx,qfx,lh,flhc,flqc,qgh,cpm,ct,       &
                 u10,v10,t2,th2,tshltr,th10,q2,qshltr,q10,pshltr,               &
                 p1000mb,u10e,v10e,                                   &
+                use_bathymetry,water_depth,                          & ! PSH
                 ids,ide, jds,jde, kds,kde,                           &
                 ims,ime, jms,jme, kms,kme,                           &
                 i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
@@ -2191,6 +2192,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
               chs,chs2,cqs2,hfx,qfx,lh,flhc,flqc,qgh,cpm,ct,       &
               u10,v10,t2,th2,tshltr,th10,q2,qshltr,q10,pshltr,               &
               p1000mb,u10e,v10e,                                   &
+              use_bathymetry,water_depth,                          & ! PSH
               ids,ide, jds,jde, kds,kde,                           &
               ims,ime, jms,jme, kms,kme,                           &
               i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )

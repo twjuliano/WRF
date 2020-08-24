@@ -74,6 +74,7 @@ CONTAINS
      &                 ,QGH,CPM,CT                                     &
      &                 ,U10,V10,T02,TH02,TSHLTR,TH10,Q02,QSHLTR,Q10,PSHLTR          &
      &                 ,P1000mb,U10E,V10E                              &
+     &                 ,USE_BATHYMETRY,WATER_DEPTH                     &
      &                 ,IDS,IDE,JDS,JDE,KDS,KDE                        &
      &                 ,IMS,IME,JMS,JME,KMS,KME                        &
      &                 ,ITS,ITE,JTS,JTE,KTS,KTE)
@@ -121,6 +122,9 @@ CONTAINS
      &                                              ,QGH
 !
       REAL,INTENT(IN) :: P1000mb
+
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
+      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ) , INTENT(IN ) :: water_depth ! PSH
 !----------------------------------------------------------------------
 !***
 !***  LOCAL VARIABLES
@@ -317,6 +321,7 @@ CONTAINS
      &               ,U10(I,J),V10(I,J),TSHLTR(I,J),TH10(I,J)          &
      &               ,QSHLTR(I,J),Q10(I,J),PSHLTR(I,J)                 &
      &               ,U10E(I,J),V10E(I,J)                              &
+     &               ,USE_BATHYMETRY,WATER_DEPTH(I,J)                  & ! PSH
      &               ,IDS,IDE,JDS,JDE,KDS,KDE                          &
      &               ,IMS,IME,JMS,JME,KMS,KME                          &
      &               ,ITS,ITE,JTS,JTE,KTS,KTE,i,j,ZHK(LMH+1))
@@ -367,6 +372,7 @@ CONTAINS
      &                 ,ZSL,PLOW                                       &
      &                 ,U10,V10,TH02,TH10,Q02,Q10,PSHLTR               &
      &                 ,U10E,V10E                                      &
+     &                 ,use_bathymetry,water_depth                     &
      &                 ,IDS,IDE,JDS,JDE,KDS,KDE                        &
      &                 ,IMS,IME,JMS,JME,KMS,KME                        &
      &                 ,ITS,ITE,JTS,JTE,KTS,KTE,i,j,ZSFC)
@@ -396,6 +402,9 @@ CONTAINS
      &                   ,TH02,TH10,U10,V10,U10E,V10E
 !
       REAL,INTENT(INOUT) :: AKHS,AKMS,QZ0,THZ0,USTAR,UZ0,VZ0,Z0,QS
+
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
+      REAL, OPTIONAL,  INTENT(IN ) :: water_depth ! PSH
 !----------------------------------------------------------------------
 !***
 !***  LOCAL VARIABLES
