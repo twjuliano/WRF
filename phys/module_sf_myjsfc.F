@@ -74,7 +74,7 @@ CONTAINS
      &                 ,QGH,CPM,CT                                     &
      &                 ,U10,V10,T02,TH02,TSHLTR,TH10,Q02,QSHLTR,Q10,PSHLTR          &
      &                 ,P1000mb,U10E,V10E                              &
-     &                 ,USE_BATHYMETRY,WATER_DEPTH                     &
+     &                 ,use_bathymetry,water_depth                     &
      &                 ,IDS,IDE,JDS,JDE,KDS,KDE                        &
      &                 ,IMS,IME,JMS,JME,KMS,KME                        &
      &                 ,ITS,ITE,JTS,JTE,KTS,KTE)
@@ -427,6 +427,9 @@ CONTAINS
      &       ,TERM1,RLOW,WSTAR,XLT02,XLT024,XLT10            &
      &       ,XLT104,XLU10,XLU104,XU10,XU104,ZT02,ZT10,ZTAT02,ZTAT10   &
      &       ,ZTAU,ZTAU10,ZU10,ZUUZ
+
+      REAL    :: depth,depth_b ! PSH
+
 !----------------------------------------------------------------------
 !**********************************************************************
 !----------------------------------------------------------------------
@@ -454,7 +457,21 @@ CONTAINS
 !----------------------------------------------------------------------
         DO ITR=1,ITRMX
 !----------------------------------------------------------------------
-          Z0=MAX(USTFC*USTAR*USTAR,1.59E-5)
+
+          IF ( use_bathymetry .eq. 1 ) THEN
+            depth = water_depth
+            IF ( depth .lt. 10.0 ) THEN
+             depth = 10.0
+            ELSEIF ( depth .gt. 100.0 ) THEN
+              depth = 100.0
+            ENDIF
+
+            depth_b = 1 / 30.0 * log (1260.0 / depth)
+            Z0 = exp((2.7 * USTAR - 1.8 / depth_b) / (USTAR + 0.17 / depth_b) )
+            Z0 = MIN(Z0,0.1)
+          ELSE
+            Z0=MAX(USTFC*USTAR*USTAR,1.59E-5)
+          ENDIF
 !
 !***  VISCOUS SUBLAYER, JANJIC MWR 1994
 !
