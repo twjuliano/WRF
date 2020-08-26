@@ -994,17 +994,7 @@ CONTAINS
 ! PSH - formulation for depth-dependent roughness from
 ! ... Jimenez and Dudhia, 2018
           IF ( use_bathymetry .eq. 1 ) THEN
-             ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))
-!            depth = water_depth(I) 
-!            IF ( depth .lt. 10.0 ) THEN
-!              depth = 10.0 
-!            ELSEIF ( depth .gt. 100.0 ) THEN
-!              depth = 100.0
-!            ENDIF
-!              
-!            depth_b = 1 / 30.0 * log (1260.0 / depth)
-!            ZNT(I)= exp((2.7 * UST(I) - 1.8 / depth_b) / (UST(I) + 0.17 / depth_b) )
-!            ZNT(I)=MIN(ZNT(I),0.1)    
+             ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))  
           ELSE
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
               ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
