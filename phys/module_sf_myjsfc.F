@@ -461,16 +461,6 @@ CONTAINS
 
           IF ( use_bathymetry .eq. 1 ) THEN
             Z0=depth_dependent_z0(water_depth,Z0,USTAR)
-!            depth = water_depth
-!            IF ( depth .lt. 10.0 ) THEN
-!             depth = 10.0
-!            ELSEIF ( depth .gt. 100.0 ) THEN
-!              depth = 100.0
-!            ENDIF
-!
-!            depth_b = 1 / 30.0 * log (1260.0 / depth)
-!            Z0 = exp((2.7 * USTAR - 1.8 / depth_b) / (USTAR + 0.17 / depth_b) )
-!            Z0 = MIN(Z0,0.1)
           ELSE
             Z0=MAX(USTFC*USTAR*USTAR,1.59E-5)
           ENDIF
