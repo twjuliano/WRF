@@ -2174,6 +2174,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                 chs,chs2,cqs2,hfx,qfx,lh,flhc,flqc,qgh,cpm,ct,       &
                 u10,v10,t2,th2,tshltr,th10,q2,qshltr,q10,pshltr,               &
                 p1000mb,u10e,v10e,                                   &
+                use_bathymetry,water_depth,                          & ! PSH
                 ids,ide, jds,jde, kds,kde,                           &
                 ims,ime, jms,jme, kms,kme,                           &
                 i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
@@ -2191,6 +2192,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
               chs,chs2,cqs2,hfx,qfx,lh,flhc,flqc,qgh,cpm,ct,       &
               u10,v10,t2,th2,tshltr,th10,q2,qshltr,q10,pshltr,               &
               p1000mb,u10e,v10e,                                   &
+              use_bathymetry,water_depth,                          & ! PSH
               ids,ide, jds,jde, kds,kde,                           &
               ims,ime, jms,jme, kms,kme,                           &
               i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte    )
@@ -4257,6 +4259,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
         &     QGH,CPM,CT,                                 &
         &     U10,V10,T02,TH02,TSHLTR,TH10,Q02,QSHLTR,Q10,PSHLTR,          &
         &     P1000,U10E,V10E,                            &
+        &     use_bathymetry,water_depth,              & !PSH
         &     IDS,IDE,JDS,JDE,KDS,KDE,                        &
         &     IMS,IME,JMS,JME,KMS,KME,                        &
         &     ITS,ITE,JTS,JTE,KTS,KTE )
@@ -4346,6 +4349,8 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
           &                IMS,IME,JMS,JME,KMS,KME,       &
           &                ITS,ITE,JTS,JTE,KTS,KTE
 
+    INTEGER , OPTIONAL , INTENT(IN)                            :: use_bathymetry ! PSH
+    real, OPTIONAL , dimension(ims:ime,jms:jme ),intent(in)    :: water_depth ! PSH
 
      ! Local
      INTEGER :: i
@@ -4494,6 +4499,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
           &        TH02, TSHLTR, TH10, Q02,                        &  ! 0,0,0,0,
           &        QSHLTR, Q10, PSHLTR,                            &  ! 0,0,0,
           &        P1000, U10E, V10E,                              &  ! I
+          &        use_bathymetry,water_depth,                     & ! PSH
           &        ids,ide, jds,jde, kds,kde,                      &
           &        ims,ime, jms,jme, kms,kme,                      &
           &        its,ite, jts,jte, kts,kte    )
@@ -4548,6 +4554,7 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
           &        FLQC_SEA, QGH_SEA, CPM_SEA, CT_SEA, U10_SEA, V10_SEA, T02_SEA, TH02_SEA,    & ! 0,0,0,0,0,0,0,0,
           &        TSHLTR_SEA, TH10_SEA, Q02_SEA, QSHLTR_SEA, Q10_SEA, PSHLTR_SEA,             & ! 0,0,0,0,0,0,
           &        p1000, u10e_sea,  v10e_sea,                                                 & ! I
+          &        use_bathymetry,water_depth,                     & ! PSH
           &        ids,ide, jds,jde, kds,kde,                                                  &
           &        ims,ime, jms,jme, kms,kme,                                                  &
           &        its,ite, jts,jte, kts,kte    )
