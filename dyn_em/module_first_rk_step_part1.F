@@ -51,7 +51,7 @@ CONTAINS
     USE module_big_step_utilities_em, ONLY : phy_prep
 !use module_scalar_tables
 #ifdef DM_PARALLEL
-    USE module_dm, ONLY : local_communicator, mytask, ntasks, ntasks_x, ntasks_y, local_communicator_periodic, wrf_dm_maxval
+    USE module_dm, ONLY : local_communicator, mytask, ntasks, ntasks_x, ntasks_y, local_communicator_periodic, wrf_dm_maxval, wrf_dm_sum_real !JDM
     USE module_comm_dm, ONLY : halo_em_phys_a_sub,halo_em_fdda_sfc_sub,halo_pwp_sub,halo_em_chem_e_3_sub, &
     halo_em_chem_e_5_sub, halo_em_hydro_noahmp_sub
 #if ( WRFPLUS == 1 )
@@ -59,6 +59,7 @@ CONTAINS
 #endif
 #endif
     USE module_utility
+    
     IMPLICIT NONE
 
     TYPE ( domain ), INTENT(INOUT) :: grid
@@ -509,11 +510,14 @@ BENCH_START(surf_driver_tim)
      &        ,MAVAIL=grid%mavail      ,NUM_SOIL_LAYERS=config_flags%num_soil_layers        &
      &        ,P8W=grid%p_hyd_w            ,PBLH=grid%pblh          ,PI_PHY=pi_phy      &
      &        ,PSFC=grid%psfc          ,PSHLTR=grid%pshltr      ,PSIH=psih          &
-     &        ,SPEC_HFX=config_flags%spec_hfx                                       & !JDM-MMC
-     &        ,SPEC_Z0=config_flags%spec_z0                                         & ! DME-MMC
-     &        ,SPEC_IDEAL=config_flags%spec_ideal                                   & ! DME-MMC
-     &        ,USTT=grid%ustt                                                       & ! DME-MMC
-     &        ,MOLT=grid%molt                                                       & ! DME-MMC
+     &        ,SPEC_IDEAL=config_flags%spec_ideal                                   & !MMC
+     &        ,SPEC_HFX=config_flags%spec_hfx                                       & !MMC
+     &        ,SPEC_SF_HEATRATE=config_flags%spec_sf_heatrate                       & !MMC
+     &        ,SPEC_Z0=config_flags%spec_z0                                         & !MMC
+     &        ,SPEC_DUMVAR_1=grid%spec_dumvar_1                                     & !MMC
+     &        ,SPEC_DUMVAR_2=grid%spec_dumvar_2                                     & !MMC 
+     &        ,USTT=grid%ustt                                                       & !MMC
+     &        ,MOLT=grid%molt                                                       & !MMC
      &        ,BLDT=grid%bldt     ,CURR_SECS=curr_secs, ADAPT_STEP_FLAG=adapt_step_flag  &
      &        ,BLDTACTTIME=grid%bldtacttime                                              & 
      &        ,PSIM=psim          ,P_PHY=grid%p_hyd        ,Q10=grid%q10            &
@@ -563,6 +567,7 @@ BENCH_START(surf_driver_tim)
      &        ,HUML=grid%huml, HVML=grid%hvml, F=grid%f                             &
      &        ,TMOML=grid%TMOML,ISWATER=iswater                                     &
      &        ,OML_RELAXATION_TIME=grid%OML_RELAXATION_TIME                         &
+     &        ,use_bathymetry=config_flags%use_bathymetry,water_depth=grid%water_depth & !PSH
      &        ,lakedepth2d=grid%lakedepth2d,    savedtke12d=grid%savedtke12d        &   
      &        ,snowdp2d=grid%snowdp2d,          h2osno2d=grid%h2osno2d              & !lake
      &        ,snl2d=grid%snl2d,                t_grnd2d=grid%t_grnd2d              &   

@@ -4836,6 +4836,32 @@ BENCH_END(bc_2d_tim)
    !$OMP END PARALLEL DO
 
    ! JDM-MMC BEGIN--------------------------------------------------------
+   ! calculate vertical slices at specified heights above the surface.
+
+   IF ( config_flags%slice_height .GT. 0.0 ) THEN
+
+    CALL wrf_debug ( 10 , ' call compute_vertical_slice' )
+
+    !$OMP PARALLEL DO   &
+    !$OMP PRIVATE ( ij )
+    DO ij = 1 , grid%num_tiles
+       CALL compute_vertical_slice(grid%u_slice, grid%v_slice,             &
+                                   grid%w_slice, grid%t_slice,             &
+                                   grid%u_2, grid%v_2, grid%w_2, grid%t_2, &  
+                                   grid%z, grid%z_at_w,                    &
+                                   grid%ht,                                &!PSH
+                                   grid%ph_2,grid%phb,                     &!PSH
+                                   config_flags%slice_height,              &
+                                   ids, ide, jds, jde, kds, kde,           & 
+                                   ims, ime, jms, jme, kms, kme,           &
+                                   grid%i_start(ij), grid%i_end(ij),       &
+                                   grid%j_start(ij), grid%j_end(ij),       &
+                                   k_start, k_end                           )
+     
+    END DO
+    !$OMP END PARALLEL DO
+
+   ENDIF
    
 ! calculate cell-centered variables for reduced output
 

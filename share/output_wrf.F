@@ -651,7 +651,7 @@ endif
     CALL wrf_put_dom_ti_integer ( fid , 'SF_LAKE_PHYSICS' ,  ibuf , 1 , ierr )
     ! PSH
     ibuf(1) = use_bathymetry  
-    CALL wrf_put_dom_ti_integer ( fid , 'SF_BATHYMETRY' ,  ibuf , 1 , ierr )
+    CALL wrf_put_dom_ti_integer ( fid , 'USE_BATHYMETRY' ,  ibuf , 1 , ierr )
 
     ! added netcdf-specific metadata:
     IF ( ( use_package( io_form ) == IO_NETCDF ) .OR. &

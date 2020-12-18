@@ -161,6 +161,7 @@ MODULES = \
 	module_sf_pxsfclay.o \
 	module_sf_temfsfclay.o \
 	module_sf_idealscmsfclay.o \
+	module_sf_spec_ideal_tsk.o \
 	module_sf_scmflux.o \
 	module_sf_scmskintemp.o \
 	module_physics_addtendc.o \

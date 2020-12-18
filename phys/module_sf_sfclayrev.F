@@ -24,13 +24,9 @@ CONTAINS
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
-                     spec_hfx,                                     & !JDM-MMC
-                     spec_z0,                                      & ! DME-MMC
-                     spec_ideal,                                   & ! DME-MMC
-                     itimestep,                                    & ! DME-MMC
-                     ustt,                                         & ! DME-MMC
-                     molt,                                         & ! DME-MMC
-                     ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,scm_force_flux )
+                     ustm,ck,cka,cd,cda,isftcflx,iz0tlnd,          &
+                     use_bathymetry,water_depth,                   & ! PSH
+                     scm_force_flux                                )
      
 !-------------------------------------------------------------------
       IMPLICIT NONE
@@ -191,16 +187,6 @@ CONTAINS
                                                               QGH
                                     
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
-
-      REAL,     INTENT(IN   )            ::   spec_hfx        !JDM-MMC
-
-      REAL,     INTENT(IN   )            ::   spec_z0         ! DME-MMC
-
-      LOGICAL,  INTENT(IN   )            ::   spec_ideal      ! DME-MMC
-
-      INTEGER,  INTENT(IN   )            ::   itimestep       ! DME-MMC
-
-      REAL,     DIMENSION( ims:ime, jms:jme ), INTENT(INOUT)   ::   ustt,molt ! DME-MMC
       
       REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme )              , &
                 INTENT(OUT)     ::                  ck,cka,cd,cda
@@ -211,6 +197,8 @@ CONTAINS
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
 
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
+      REAL, OPTIONAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN)  :: water_depth ! PSH
 ! LOCAL VARS
 
       REAL,     DIMENSION( its:ite ) ::                       U1D, &
@@ -222,38 +210,7 @@ CONTAINS
       REAL,     DIMENSION( its:ite ) ::                    dz8w1d
 
       INTEGER ::  I,J
-
-      REAL :: dth_i, thx_i ! DME-MMC
-
-! DME-MMC modifications to set z0 and properly calculate TSK from an imposed heat flux (spec_hfx, W m-2)
-      IF ( spec_ideal ) THEN
-        DO J=jts,jte
-          DO I=its,ite
-            ust(i,j) = ustt(i,j)
-            mol(i,j) = molt(i,j)
-            znt(i,j) = spec_z0
-          ENDDO
-        ENDDO
-        IF (itimestep .ne. 1) THEN
-          DO J=jts,jte
-            DO I=its,ite
-              IF (spec_hfx .eq. 0.) THEN
-                dth_i = 0.
-                thx_i = t3d(i,1,j)*(P1000mb/p3d(i,1,j))**rovcp
-                tsk(i,j) = (dth_i + thx_i)/(P1000mb/(psfc(i,j)))**rovcp
-              ELSEIF (flhc(i,j) .ne. 0. ) THEN
-                dth_i = spec_hfx/flhc(i,j)
-                thx_i = t3d(i,1,j)*(P1000mb/p3d(i,1,j))**rovcp
-                tsk(i,j) = (dth_i + thx_i)/(P1000mb/(psfc(i,j)))**rovcp
-              ELSE
-                ! do nothing, flhc(i,j) = 0.0...
-              ENDIF
-            ENDDO
-          ENDDO
-        ENDIF
-      ENDIF
-! DME-MMC
-
+    
       DO J=jts,jte
         DO i=its,ite
           dz8w1d(I) = dz8w(i,1,j)
@@ -283,6 +240,7 @@ CONTAINS
                 GZ1OZ0(ims,j),WSPD(ims,j),BR(ims,j),ISFFLX,DX,     &
                 SVP1,SVP2,SVP3,SVPT0,EP1,EP2,KARMAN,EOMEG,STBOLT,  &
                 P1000mb,                                           &
+                use_bathymetry,water_depth(ims,j),                 & ! PSH
                 ids,ide, jds,jde, kds,kde,                         &
                 ims,ime, jms,jme, kms,kme,                         &
                 its,ite, jts,jte, kts,kte                          &
@@ -293,16 +251,6 @@ CONTAINS
 #endif
                                                                     )
       ENDDO
-
-      IF ( spec_ideal ) THEN ! DME-MMC
-        DO J=jts,jte
-          DO I=its,ite
-            ustt(i,j) = ust(i,j)
-            molt(i,j) = mol(i,j)
-          ENDDO
-        ENDDO
-      ENDIF
-
 
    END SUBROUTINE SFCLAYREV
 
@@ -317,6 +265,7 @@ CONTAINS
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
                      P1000mb,                                      &
+                     use_bathymetry,water_depth,                   & ! PSH
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
@@ -379,9 +328,10 @@ CONTAINS
                 INTENT(OUT)     ::                        U10,V10, &
                                                 TH2,T2,Q2,QSFC,LH
 
-                                    
       REAL,     INTENT(IN   )               ::   CP,G,ROVCP,R,XLV,DX
 
+      INTEGER,  OPTIONAL,  INTENT(IN )   ::     use_bathymetry ! PSH
+      REAL, OPTIONAL, DIMENSION( ims:ime ), INTENT(IN)  :: water_depth ! PSH
 ! MODULE-LOCAL VARIABLES, DEFINED IN SUBROUTINE SFCLAY
       REAL,     DIMENSION( its:ite ),  INTENT(IN   )   ::  dz8w1d
 
@@ -436,6 +386,7 @@ CONTAINS
 ! .... paj ...
 !
       REAL    :: zolzz,zol0
+      REAL    :: depth,depth_b ! PSH
 !     REAL    :: zolri,zolri2
 !     REAL    :: psih_stable,psim_stable,psih_unstable,psim_unstable
 !     REAL    :: psih_stable_full,psim_stable_full,psih_unstable_full,psim_unstable_full
@@ -995,11 +946,13 @@ CONTAINS
            ENDIF
         ENDIF
 ! TO PREVENT OSCILLATIONS AVERAGE WITH OLD VALUE 
-        UST(I)=0.5*UST(I)+0.5*KARMAN*WSPD(I)/PSIX                                             
+! JDM ORIG        UST(I)=0.5*UST(I)+0.5*KARMAN*WSPD(I)/PSIX   ! JDM ORIG                                           
+            UST(I)=KARMAN*WSPD(I)/PSIX   !JDM 
 ! TKE coupling: compute ust without vconv for use in tke scheme
         WSPDI(I)=SQRT(UX(I)*UX(I)+VX(I)*VX(I))
         IF ( PRESENT(USTM) ) THEN
-        USTM(I)=0.5*USTM(I)+0.5*KARMAN*WSPDI(I)/PSIX
+!JDM ORIG       USTM(I)=0.5*USTM(I)+0.5*KARMAN*WSPDI(I)/PSIX
+            USTM(I)=KARMAN*WSPDI(I)/PSIX   !JDM
         ENDIF
 
         U10(I)=UX(I)*PSIX10/PSIX                                    
@@ -1038,10 +991,16 @@ CONTAINS
       DO 360 I=its,ite
         IF((XLAND(I)-1.5).GE.0)THEN                                            
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
+! PSH - formulation for depth-dependent roughness from
+! ... Jimenez and Dudhia, 2018
+          IF ( use_bathymetry .eq. 1 ) THEN
+             ZNT(I) = depth_dependent_z0(water_depth(I),ZNT(I),UST(I))  
+          ELSE
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
-          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+              ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
 ! V3.9: Add limit as in isftcflx = 1,2
-          ZNT(I)=MIN(ZNT(I),2.85e-3)
+              ZNT(I)=MIN(ZNT(I),2.85e-3)
+          ENDIF
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
 !         CZC = min(CZC,0.028)
@@ -1319,6 +1278,20 @@ CONTAINS
       return
       end function
 
+     function depth_dependent_z0(water_depth,z0,UST)
+     real :: depth_b
+     real :: effective_depth
+        IF ( water_depth .lt. 10.0 ) THEN
+          effective_depth = 10.0 
+        ELSEIF ( water_depth .gt. 100.0 ) THEN
+          effective_depth = 100.0
+        ENDIF
+              
+        depth_b = 1 / 30.0 * log (1260.0 / effective_depth)
+        depth_dependent_z0 = exp((2.7 * ust - 1.8 / depth_b) / (ust + 0.17 / depth_b) )
+        depth_dependent_z0 = MIN(z0,0.1)     
+    return
+    end function
 !-------------------------------------------------------------------          
 
 END MODULE module_sf_sfclayrev
