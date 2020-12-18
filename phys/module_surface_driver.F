@@ -298,6 +298,9 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
      &          ,spp_lsm,pattern_spp_lsm,field_sf                     &  !SPP
      &          ,spp_pbl,pattern_spp_pbl                              &  !SPP
      &          ,XLAIDYN                                              &
+     &          ,irrigation,sf_surf_irr_scheme, irr_daily_amount      & !IRRIG
+     &          ,irr_start_hour,irr_num_hours,irr_start_julianday     &
+     &          ,irr_end_julianday,irr_freq,irr_ph,irr_rand_field     &
      &                                                             )
 
 #if ( ! NMM_CORE == 1 )
@@ -320,7 +323,9 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                                        ,SSIBSCHEME                & !ssib
                                        ,MYNNSFCSCHEME             &
                                        ,OMLSCHEME                 &
-                                       ,PWP3DSCHEME
+                                       ,PWP3DSCHEME               &
+                                       ,DRIP                      &
+                                       ,CHANNEL                   
 #else
    USE module_state_description, ONLY : SFCLAYSCHEME              &
                                        ,SFCLAYREVSCHEME           &
@@ -339,13 +344,14 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                                        ,TEMFSFCSCHEME             &
                                        ,GFDLSFCSCHEME             &
                                        ,SSIBSCHEME                & ! ssib
-                                       ,GFDLSLAB 
+                                       ,GFDLSLAB                   
+
 
 
 #endif
    USE module_model_constants
 ! *** add new modules of schemes here
-
+   USE module_irrigation
    USE module_sf_sfclay
    USE module_sf_myjsfc
    USE module_sf_qnsesfc
@@ -1402,6 +1408,18 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
 
    real,    optional,  dimension(ims:ime,jms:jme ),intent(inout) :: XLAIDYN
 
+! IRRIGATION
+   INTEGER :: tloc, jmonth,timing  
+   REAL, PARAMETER    :: PI_GRECO=3.14159 
+   INTEGER  :: end_hour, irr_start,xt24,irr_day  
+   REAL :: constants_irrigation   
+   REAL,DIMENSION( ims:ime, jms:jme ) :: IRRIGATION_CHANNEL      
+   REAL, DIMENSION( ims:ime , jms:jme ), INTENT(IN),OPTIONAL::   IRRIGATION
+   REAL,  INTENT(IN),OPTIONAL::  irr_daily_amount     
+   INTEGER :: phase
+   INTEGER, DIMENSION( ims:ime , jms:jme ), INTENT(INOUT),OPTIONAL :: irr_rand_field
+   INTEGER, INTENT(IN ),OPTIONAL:: sf_surf_irr_scheme,irr_start_hour,irr_num_hours,irr_start_julianday,irr_end_julianday,irr_freq,irr_ph
+
 !
 !------------------------------------------------------------------
 ! Initialize local variables
@@ -1500,6 +1518,28 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
          RAINBL(i,j) = RAINBL(i,j) + RAINCV(i,j) + RAINNCV(i,j)
          IF ( PRESENT( rainshv ))RAINBL(i,j) = RAINBL(i,j) + RAINSHV(i,j)
          RAINBL(i,j) = MAX (RAINBL(i,j), 0.0)
+#if (EM_CORE==1)
+         sf_surf_irr: SELECT CASE(sf_surf_irr_scheme)
+            CASE(DRIP)
+               CALL drip_irrigation(                                     &
+                &  julian_in,IRRIGATION(i,j),sf_surf_irr_scheme,         &
+                &  irr_daily_amount,irr_start_hour,irr_num_hours,        &
+                &  irr_start_julianday,irr_end_julianday,                &
+                &  irr_freq,irr_ph,i,j,RAINBL(i,j),                      &
+                &  IRRIGATION_CHANNEL(i,j),gmt,xtime,dt,                 &
+                &  irr_rand_field(i,j)                                   &
+                   )
+            CASE(CHANNEL)
+               CALL channel_irrigation(                                  &
+                &  julian_in,IRRIGATION(i,j),sf_surf_irr_scheme,         &
+                &  irr_daily_amount,irr_start_hour,irr_num_hours,        &
+                &  irr_start_julianday,irr_end_julianday,                &
+                &  irr_freq,irr_ph,i,j,RAINBL(i,j),                      &
+                &  IRRIGATION_CHANNEL(i,j),gmt,xtime,dt,                 &
+                &  irr_rand_field(i,j)                                   &
+                   )
+           END SELECT sf_surf_irr
+#endif
       ENDDO
       ENDDO
     ENDDO
@@ -1513,6 +1553,31 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
          RAINBL(i,j) = RAINBL(i,j) + RAINCV(i,j)
          IF ( PRESENT( rainshv ))RAINBL(i,j) = RAINBL(i,j) + RAINSHV(i,j)
          RAINBL(i,j) = MAX (RAINBL(i,j), 0.0)
+
+#if (EM_CORE==1)
+          sf_surf_irr1: SELECT CASE(sf_surf_irr_scheme)
+             CASE(DRIP)
+               CALL drip_irrigation(                                     &
+                &  julian_in,IRRIGATION(i,j),sf_surf_irr_scheme,         &
+                &  irr_daily_amount,irr_start_hour,irr_num_hours,        &
+                &  irr_start_julianday,irr_end_julianday,                &
+                &  irr_freq,irr_ph,i,j,RAINBL(i,j),                      &
+                &  IRRIGATION_CHANNEL(i,j),gmt,xtime,dt,                 &
+                &  irr_rand_field(i,j)                                   &
+                   )
+
+            CASE(CHANNEL)
+               CALL channel_irrigation(                                  &
+                &  julian_in,IRRIGATION(i,j),sf_surf_irr_scheme,         &
+                &  irr_daily_amount,irr_start_hour,irr_num_hours,        &
+                &  irr_start_julianday,irr_end_julianday,                &
+                &  irr_freq,irr_ph,i,j,RAINBL(i,j),                      &
+                &  IRRIGATION_CHANNEL(i,j),gmt,xtime,dt,                 &
+                &  irr_rand_field(i,j)                                   &
+                   )
+        END SELECT sf_surf_irr1
+#endif
+
       ENDDO
       ENDDO
     ENDDO
@@ -3210,7 +3275,8 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
 	 
 	 ENDIF 
 
-  if(iopt_run.eq.5.and.mod(itimestep,STEPWTD).eq.0)then
+  IF ( iopt_run .EQ. 5 ) THEN
+     IF ( MOD(itimestep,STEPWTD) .EQ. 0 ) THEN ! STEPWTD always and only non-zero for iopt_run == 5
            CALL wrf_debug( 100, 'calling WTABLE' )
 
 !gmm update wtable from lateral flow and shed water to rivers
@@ -3225,7 +3291,8 @@ e    &           ,htmx,croplive,gdd1020,gdd820,gdd020,grainc,grainc_storage  &
                                   ims,ime, jms,jme, kms,kme,                             &
                                   i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte )
 
-  endif
+     END IF
+  END IF
 
          call seaice_noah( SEAICE_ALBEDO_OPT, SEAICE_ALBEDO_DEFAULT, SEAICE_THICKNESS_OPT, &
               &            SEAICE_THICKNESS_DEFAULT, SEAICE_SNOWDEPTH_OPT,             &
