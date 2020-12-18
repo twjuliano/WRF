@@ -5,6 +5,151 @@ MODULE module_tsout
 USE module_model_constants
 
 CONTAINS
+
+SUBROUTINE compute_vertical_slice( u_slice, v_slice,                          &
+                                   w_slice, t_slice,                          &
+                                   u, v, w, t, z, z_at_w,                     &
+                                   hgt,                                       &
+                                   ph,phb,                                    &
+                                   slice_height,                              &
+                                   ids, ide, jds, jde, kds, kde,              &
+                                   ims, ime, jms, jme, kms, kme,              &
+                                   its, ite, jts, jte, kts, kte               )
+
+!=======================================================================
+!
+!  This subroutine calculates interpolated horizontal slices at specified heights.
+!
+!======================================================================= 
+
+   IMPLICIT NONE
+
+   REAL, DIMENSION(ims:ime,jms:jme), INTENT( OUT ) :: u_slice, v_slice, &
+                                                      w_slice, t_slice
+   
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(  IN ) :: u, v, w, t, z, z_at_w
+   REAL, DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(  IN ) :: ph,phb
+   REAL, DIMENSION(ims:ime,jms:jme), INTENT(  IN ) :: hgt
+   
+   REAL, INTENT(  IN ) :: slice_height
+   
+   INTEGER , INTENT( IN  ) :: ids, ide, jds, jde, kds, kde, &
+                              ims, ime, jms, jme, kms, kme, &
+                              its, ite, jts, jte, kts, kte
+
+   ! local variables
+   
+
+   INTEGER :: i, j, k, k_max
+
+   REAL :: z_1, z_2, d_1, d_2, d_z, fac_1, fac_2
+   REAL :: slice_height_abs
+   REAL :: u_m_1, u_m_2, v_m_1, v_m_2
+   REAL :: z_w_1,z_w_2
+
+   
+!-----------------------------------------------------------------------
+! executable code starts here
+!
+   DO i = its, MIN(ite,ide-1)
+      DO j = jts, MIN(jte,jde-1)
+
+         DO k = kts+1, MIN(kte,kde-1)
+
+            z_2 =  z(i,k,j) ! slices are interpolated to cell centers
+            z_w_2 = 0.5*( z(i,k,j) + z(i,k+1,j) ) 
+
+            slice_height_abs = slice_height + hgt(i,j)
+
+
+            IF ( z_w_2 .GE. slice_height_abs ) THEN
+               z_w_1 = 0.5*(z(i,k-1,j) + z(i,k,j)) 
+
+               d_z = z_w_2 - z_w_1
+               d_2 = z_w_2 - slice_height_abs
+               d_1 = slice_height_abs - z_w_1
+               fac_2 = d_2/d_z
+               fac_1 = d_1/d_z
+               
+               w_slice(i,j) = fac_2*w(i,k-1,j) + fac_1*w(i,k,j)
+
+               GOTO 20
+               
+            ENDIF
+
+20       CONTINUE
+
+            IF ( z_2 .GE. slice_height_abs ) THEN
+               z_1 = z(i,k-1,j)
+
+               d_z = z_2 - z_1
+               d_2 = z_2 - slice_height_abs
+               d_1 = slice_height_abs - z_1
+               fac_2 = d_2/d_z
+               fac_1 = d_1/d_z
+               
+               u_m_2 = 0.5*(u(i+1,k,j) + u(i,k,j) ) ! u at cell center level k
+               u_m_1 = 0.5*(u(i+1,k-1,j) + u(i,k-1,j) ) ! u at cell center level k-1
+               v_m_2 = 0.5*(v(i,k,j+1) + v(i,k,j) ) ! v at cell center level k
+               v_m_1 = 0.5*(v(i,k-1,j+1) + v(i,k-1,j) ) ! v at cell center level k-1
+
+               u_slice(i,j) = fac_2*u_m_1 + fac_1*u_m_2
+               v_slice(i,j) = fac_2*v_m_1 + fac_1*v_m_2
+               t_slice(i,j) = fac_2*t(i,k-1,j) + fac_1*t(i,k,j)
+                
+               GOTO 30
+               
+            ENDIF
+
+         END DO
+
+30       CONTINUE
+         
+      END DO
+   END DO
+
+
+
+
+   DO i = its, MIN(ite,ide-1)
+      DO j = jts, MIN(jte,jde-1)
+
+         DO k = kts+1, MIN(kte,kde-1)
+
+            z_2 =  z(i,k,j) ! slices are interpolated to cell centers
+            z_w_2 = 0.5*( z(i,k,j) + z(i,k+1,j) ) 
+
+            slice_height_abs = slice_height + hgt(i,j)
+
+
+            IF ( z_w_2 .GE. slice_height_abs ) THEN
+               z_w_1 = 0.5*(z(i,k-1,j) + z(i,k,j)) 
+
+               d_z = z_w_2 - z_w_1
+               d_2 = z_w_2 - slice_height_abs
+               d_1 = slice_height_abs - z_w_1
+               fac_2 = d_2/d_z
+               fac_1 = d_1/d_z
+               
+               w_slice(i,j) = fac_2*w(i,k-1,j) + fac_1*w(i,k,j)
+
+               GOTO 40
+               
+            ENDIF
+
+         END DO
+
+40       CONTINUE
+         
+      END DO
+   END DO
+     
+   
+   RETURN
+
+END SUBROUTINE compute_vertical_slice
+
+
   
 SUBROUTINE cell_centered_calc( uts, vts, wts, tts, pts, tkets, zts,       &
                                t11ts, t22ts, t33ts, t12ts, t13ts, t23ts,  &
