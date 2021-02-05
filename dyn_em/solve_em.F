@@ -78,8 +78,9 @@ SUBROUTINE solve_em ( grid , config_flags  &
    USE module_llxy, ONLY : proj_cassini
    USE module_avgflx_em, ONLY : zero_avgflx, upd_avgflx
    USE module_cpl, ONLY : coupler_on, cpl_settime, cpl_store_input
-   USE module_tsout !JDM-MMC
-   USE module_cellpert ! DME-MMC
+   USE module_tsout             !JDM-MMC
+   USE module_horizontal_slices !JDM-MMC
+   USE module_cellpert          ! DME-MMC
 
    IMPLICIT NONE
 
@@ -4838,25 +4839,24 @@ BENCH_END(bc_2d_tim)
    ! JDM-MMC BEGIN--------------------------------------------------------
    ! calculate vertical slices at specified heights above the surface.
 
-   IF ( config_flags%slice_height .GT. 0.0 ) THEN
+   IF ( config_flags%slice_opt .EQ. 1 ) THEN
 
     CALL wrf_debug ( 10 , ' call compute_vertical_slice' )
 
     !$OMP PARALLEL DO   &
     !$OMP PRIVATE ( ij )
     DO ij = 1 , grid%num_tiles
-       CALL compute_vertical_slice(grid%u_slice, grid%v_slice,             &
-                                   grid%w_slice, grid%t_slice,             &
-                                   grid%u_2, grid%v_2, grid%w_2, grid%t_2, &  
-                                   grid%z, grid%z_at_w,                    &
-                                   grid%ht,                                &!PSH
-                                   grid%ph_2,grid%phb,                     &!PSH
-                                   config_flags%slice_height,              &
-                                   ids, ide, jds, jde, kds, kde,           & 
-                                   ims, ime, jms, jme, kms, kme,           &
-                                   grid%i_start(ij), grid%i_end(ij),       &
-                                   grid%j_start(ij), grid%j_end(ij),       &
-                                   k_start, k_end                           )
+       CALL compute_horizontal_slices( grid%slices_u, grid%slices_v,                &
+                                       grid%slices_w, grid%slices_t, grid%slices_z, &
+                                       grid%u_2, grid%v_2, grid%w_2, grid%t_2,      &  
+                                       grid%z, grid%z_at_w, grid%ht,                &
+                                       config_flags%num_slices,                     &
+                                       model_config_rec%slice_heights,              &
+                                       ids, ide, jds, jde, kds, kde,                & 
+                                       ims, ime, jms, jme, kms, kme,                &
+                                       grid%i_start(ij), grid%i_end(ij),            &
+                                       grid%j_start(ij), grid%j_end(ij),            &
+                                       k_start, k_end                                 )
      
     END DO
     !$OMP END PARALLEL DO
