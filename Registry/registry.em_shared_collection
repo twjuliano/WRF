@@ -31,3 +31,5 @@ include registry.solar_fields
 include registry.tsout
 include registry.cell_pert
 include registry.mom_pert
+include registry.scpm_jdm
+include registry.slices

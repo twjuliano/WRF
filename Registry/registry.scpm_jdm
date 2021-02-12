@@ -1,0 +1,11 @@
+state   real    pert_t   ikj    misc            1       -       rh      "pert_t"        ""      "K"
+state   real    prttms   k      misc            1       -       r       "prttms"        ""      "s"
+state   real    prtdt    k      misc            1       -       r       "prtdt"         ""      "s"
+state   real    prtk     k      misc            1       -       r       "prtk"         ""      "s"
+state   real    prtz     -      misc            1       -       r       "prtz"          ""      "m"
+state   integer prtnk    -      misc            1       -       r       "prtnk"         ""      ""
+state   integer prtseed  k      misc            1       -       r       "prtseed"       ""      ""
+state   real    m_pblh   ij     misc            1       -       rhdf    "m_pblh"       "PBL height for stoch. LES inflow perts" "m"
+
+rconfig	integer scpm_jdm_opt   	namelist,dynamics       max_domains     0       -       "Option to use stoch LES inflow perts, 0 is off"
+rconfig	integer m_pblh_opt    	namelist,dynamics       max_domains     0       -       "1 to calculate mesoscale pblh and pass to LES for stoch LES inflow perts, 0 is off"
