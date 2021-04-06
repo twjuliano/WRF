@@ -210,6 +210,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                          dampcoef,zdamp,damp_opt,rad_nudge,               &
                          cf1, cf2, cf3, cfn, cfn1, n_moist,               &
                          non_hydrostatic, top_lid,                        &
+                         doing_q_sq,                                      &
                          u_frame, v_frame,                                &
                          ids, ide, jds, jde, kds, kde,                    &
                          ims, ime, jms, jme, kms, kme,                    &
@@ -221,6 +222,9 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
    !  Input data.
 
    TYPE(grid_config_rec_type)    ,           INTENT(IN   ) :: config_flags
+
+   LOGICAL ,               INTENT(IN   ) :: doing_q_sq  ! prognostic q_sq
+                                                        ! flag for pbl3d
 
    INTEGER ,               INTENT(IN   ) :: ids, ide, jds, jde, kds, kde, &
                                             ims, ime, jms, jme, kms, kme, &
@@ -628,6 +632,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                           msfux, msfuy, msfvx, msfvy,   &
                           msftx, msfty, fnm, fnp,       &
                           rdx, rdy, rdnw,               &
+                          doing_q_sq,                   &
                           ids, ide, jds, jde, kds, kde, &
                           ims, ime, jms, jme, kms, kme, &
                           its, ite, jts, jte, kts, kte )
@@ -799,7 +804,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
 
   forward_step: IF( rk_step == 1 ) THEN
 
-    diff_opt1 : IF (config_flags%diff_opt .eq. 1) THEN
+    diff_opt1 : IF (config_flags%diff_opt .eq. 1 .and. config_flags%pbl3d_opt .lt. 1) THEN
    
         CALL horizontal_diffusion ('u', u, ru_tendf, mut,               &
                                         c1h, c2h, config_flags,         &
@@ -839,7 +844,7 @@ SUBROUTINE rk_tendency ( config_flags, rk_step,                           &
                                          ims, ime, jms, jme, kms, kme,    &
                                          its, ite, jts, jte, kts, kte    )
 
-        pbl_test : IF (config_flags%bl_pbl_physics .eq. 0) THEN
+        pbl_test : IF (config_flags%bl_pbl_physics .eq. 0 .and. config_flags%pbl3d_opt .eq. 0) THEN
 
           CALL vertical_diffusion_u ( u, ru_tendf, config_flags,      &
                                       u_base, c1h, c2h,               &
@@ -1095,6 +1100,7 @@ END SUBROUTINE rk_addtend_dry
 
 SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                             tenddec,                         &
+                            doing_q_sq,                      &
                             rk_step, dt_step,                &
                             ru, rv, ww, wwE, wwI,            &  
                             u_old, v_old,                    &  
@@ -1124,6 +1130,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
    TYPE(grid_config_rec_type   ) ,   INTENT(IN   ) :: config_flags
 
    LOGICAL ,                INTENT(IN   ) :: tenddec ! tendency term
+
+   LOGICAL ,                INTENT(IN   ) :: doing_q_sq  ! prognostic q_sq
+                                                         ! flag for pbl3d
 
    INTEGER ,                INTENT(IN   ) :: rk_step, scs, sce
    INTEGER ,                INTENT(IN   ) :: ids, ide, jds, jde, kds, kde, &
@@ -1337,6 +1346,7 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                  msfux, msfuy, msfvx, msfvy,    &
                                  msftx, msfty, fnm, fnp,        &
                                  rdx, rdy, rdnw,                &
+                                 doing_q_sq,                    &
                                  ids, ide, jds, jde, kds, kde,  &
                                  ims, ime, jms, jme, kms, kme,  &
                                  its, ite, jts, jte, kts, kte  )
@@ -1377,9 +1387,9 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
 
      rk_step_1: IF( rk_step == 1 ) THEN
 
-       diff_opt1 : IF (config_flags%diff_opt .eq. 1) THEN
+       diff_opt1 : IF (config_flags%diff_opt .eq. 1 .and. config_flags%pbl3d_opt .lt. 1) THEN
 
-         IF (.not. mix2_off)                                                   &
+         IF ((.not. mix2_off) .and. (.not. doing_q_sq))                        &
            CALL horizontal_diffusion ( 'm', scalar(ims,kms,jms,im),            &
                                             scalar_tends(ims,kms,jms,im), mut, &
                                             c1h, c2h, config_flags,            &
@@ -1390,7 +1400,7 @@ SUBROUTINE rk_scalar_tend ( scs, sce, config_flags,          &
                                             ims, ime, jms, jme, kms, kme,      &
                                             its, ite, jts, jte, kts, kte      )
 
-         pbl_test : IF (config_flags%bl_pbl_physics .eq. 0) THEN
+         pbl_test : IF (config_flags%bl_pbl_physics .eq. 0 .and. config_flags%pbl3d_opt .eq. 0) THEN
 
            IF( (moist_step) .and. ( im == P_QV)) THEN
 
@@ -1918,7 +1928,8 @@ END SUBROUTINE rk_update_scalar_pd
 !------------------------------------------------------------
 
 SUBROUTINE init_zero_tendency(ru_tendf, rv_tendf, rw_tendf, ph_tendf,  &
-                              t_tendf,  tke_tendf, mu_tendf,           &
+                              t_tendf,  tke_tendf, q_sq_prog_tendf,    &
+                              mu_tendf,                                &
                               moist_tendf,chem_tendf,scalar_tendf,     &
                               tracer_tendf,n_tracer,                   &
                               n_moist,n_chem,n_scalar,rk_step,         &
@@ -1941,7 +1952,8 @@ SUBROUTINE init_zero_tendency(ru_tendf, rv_tendf, rw_tendf, ph_tendf,  &
                                                              rw_tendf, &
                                                              ph_tendf, &
                                                               t_tendf, &
-                                                            tke_tendf
+                                                            tke_tendf, &
+                                                      q_sq_prog_tendf
 
    REAL , DIMENSION( ims:ime , jms:jme  ) , INTENT(INOUT) ::  mu_tendf
 
@@ -1994,6 +2006,11 @@ SUBROUTINE init_zero_tendency(ru_tendf, rv_tendf, rw_tendf, ph_tendf,  &
                     its, ite, jts, jte, kts, kte     )
 
    CALL zero_tend ( tke_tendf,                       &
+                    ids, ide, jds, jde, kds, kde,    &
+                    ims, ime, jms, jme, kms, kme,    &
+                    its, ite, jts, jte, kts, kte     )
+
+   CALL zero_tend ( q_sq_prog_tendf,                 &
                     ids, ide, jds, jde, kds, kde,    &
                     ims, ime, jms, jme, kms, kme,    &
                     its, ite, jts, jte, kts, kte     )
@@ -2487,7 +2504,7 @@ SUBROUTINE positive_definite_filter ( a,                          &
 
 !-----------------------------------------------------------------------
 
-SUBROUTINE bound_tke ( tke, tke_upper_bound,       &
+SUBROUTINE bound_tke ( tke, tke_upper_bound, tke_lower_bound,       &
                        ids,ide, jds,jde, kds,kde,  &
                        ims,ime, jms,jme, kms,kme,  &
                        its,ite, jts,jte, kts,kte  )
@@ -2499,7 +2516,7 @@ SUBROUTINE bound_tke ( tke, tke_upper_bound,       &
                                         its,ite, jts,jte, kts,kte
 
   REAL, DIMENSION( ims:ime , kms:kme , jms:jme  ), INTENT(INOUT) :: tke
-  REAL, INTENT(   IN) :: tke_upper_bound
+  REAL, INTENT(   IN) :: tke_upper_bound, tke_lower_bound
 
   INTEGER :: i,k,j
 
@@ -2512,7 +2529,7 @@ SUBROUTINE bound_tke ( tke, tke_upper_bound,       &
   DO j=jts,min(jte,jde-1)
   DO k=kts,kte-1
   DO i=its,min(ite,ide-1)
-    tke(i,k,j) = min(tke_upper_bound,max(tke(i,k,j),0.))
+    tke(i,k,j) = min(tke_upper_bound,max(tke(i,k,j),tke_lower_bound))
   ENDDO
   ENDDO
   ENDDO

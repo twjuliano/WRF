@@ -17,6 +17,7 @@ CONTAINS
                              , rw_tendf, t_tendf                &
                              , ph_tendf, mu_tendf               &
                              , tke_tend                         &
+                             , q_sq_prog_tend                   &
                              , adapt_step_flag , curr_secs      &
                              , psim , psih , gz1oz0 , chklowq   &
                              , cu_act_flag , hol , th_phy       &
@@ -45,11 +46,14 @@ CONTAINS
             ,halo_em_phys_pbl_sub,halo_em_phys_shcu_sub &
             ,halo_em_fdda_sub,halo_em_phys_diffusion_sub,halo_em_tke_3_sub &
             ,halo_em_tke_5_sub,halo_obs_nudge_sub,period_bdy_em_a1_sub,period_bdy_em_phy_bc_sub &
-            ,period_bdy_em_fdda_bc_sub,period_bdy_em_chem_sub,halo_em_phys_cu_sub,halo_em_helicity_sub
+            ,period_bdy_em_fdda_bc_sub,period_bdy_em_chem_sub,halo_em_phys_cu_sub,halo_em_helicity_sub &
+            ,halo_em_phys_state_pbl3d_sub,halo_em_phys_substep_pbl3d_sub,halo_em_phys_diffusion_pbl3d_sub &
+            ,halo_em_pbl3d_3_sub,halo_em_pbl3d_5_sub &
+            ,period_bdy_em_state_pbl3d_sub,period_bdy_em_substep_pbl3d_sub,period_bdy_em_phy_bc_pbl3d_sub
 #endif
 
     USE module_driver_constants
-    USE module_diffusion_em, ONLY : phy_bc, cal_deform_and_div, compute_diff_metrics, &
+    USE module_diffusion_em, ONLY : phy_bc, phy_bc_state_pbl3d, phy_bc_pbl3d, cal_deform_and_div, compute_diff_metrics, &
                                     vertical_diffusion_2, horizontal_diffusion_2, calculate_km_kh, &
                                     tke_rhs, cal_helicity, &
                                     nonlocal_flux,meso_length_scale,free_atmos_length, &
@@ -61,6 +65,8 @@ CONTAINS
 
     USE module_sfs_driver !JDM
     USE module_stoch, ONLY : update_stoch_ten, perturb_physics_tend,RAND_PERT_UPDATE
+    USE module_pbl3d, ONLY : Init_temp_arrays_for_substep, Update_wrf_tends_temp_state_and_zero_tends, Allocate_temp_tends, Deallocate_temp_tends, &
+                             Calc_turb_fluxes, Vertical_turb_mix, Horizontal_turb_mix
 
 
     IMPLICIT NONE
@@ -113,6 +119,7 @@ CONTAINS
     REAL    ,DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT) :: ph_tendf
     REAL    ,DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT) :: t_tendf
     REAL    ,DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT) :: tke_tend
+    REAL    ,DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(INOUT) :: q_sq_prog_tend
 
     REAL    ,DIMENSION(ims:ime,jms:jme), INTENT(INOUT) :: mu_tendf
 
@@ -129,10 +136,17 @@ CONTAINS
 
 ! Local
 
+    REAL, DIMENSION(:,:,:), ALLOCATABLE :: ru_tendf_tmp,   &
+                                           rv_tendf_tmp,   &
+                                           rw_tendf_tmp,   &
+                                           t_tendf_tmp,    &
+                                           moist_tend_tmp, &
+                                           q_sq_tend_tmp
+
     REAL, DIMENSION( ims:ime, jms:jme ) :: ht_loc
     REAL :: scale_factor
     INTEGER, DIMENSION( ims:ime, jms:jme ) :: shadowmask 
-    INTEGER                             :: ij
+    INTEGER                             :: ij, ss
     INTEGER  num_roof_layers
     INTEGER  num_wall_layers
     INTEGER  num_road_layers
@@ -354,7 +368,8 @@ BENCH_END(cal_phy_tend)
 
 ! tke diffusion
 
-       IF(config_flags%diff_opt .eq. 2 .OR. config_flags%diff_opt .eq. 1) THEN
+       IF(config_flags%diff_opt .eq. 2 .OR. config_flags%diff_opt .eq. 1 .or. &
+           ABS(config_flags%pbl3d_opt) > 0) THEN
 
 BENCH_START(comp_diff_metrics_tim)
          !$OMP PARALLEL DO   &
@@ -697,6 +712,17 @@ ENDIF
          WRITE(wrf_err_message,*)'solve_em: invalid h_sca_adv_order = ',config_flags%h_sca_adv_order
          CALL wrf_error_fatal(TRIM(wrf_err_message))
        ENDIF
+
+       IF ( (config_flags%bl_pbl_physics .eq. 0) .and. abs(config_flags%pbl3d_opt) .gt. 0 .and. (config_flags%pbl3d_prog .gt. 0) ) THEN
+         IF      ( config_flags%h_pbl3d_adv_order <= 4 ) THEN
+#         include "HALO_EM_PBL3D_3.inc"
+         ELSE IF ( config_flags%h_pbl3d_adv_order <= 6 ) THEN
+#         include "HALO_EM_PBL3D_5.inc"
+         ELSE
+           WRITE(wrf_err_message,*)'solve_em: invalid h_pbl3d_adv_order = ',config_flags%h_pbl3d_adv_order
+           CALL wrf_error_fatal(TRIM(wrf_err_message))
+         ENDIF
+       END IF
 #endif
 
 BENCH_START(update_phy_ten_tim)
@@ -948,7 +974,7 @@ BENCH_END(tke_rhs_tim)
 
        IF(config_flags%diff_opt .eq. 2) THEN
 
-         IF (config_flags%bl_pbl_physics .eq. 0) THEN
+         IF (config_flags%bl_pbl_physics .eq. 0 .AND. config_flags%pbl3d_opt .eq. 0) THEN
 
 !XZ    implicit solver for vertical diffusion tendency
          IF( config_flags%km_opt .eq. 5 ) THEN
@@ -1014,6 +1040,8 @@ BENCH_END(vert_diff_tim)
 
          ENDIF
         ENDIF
+
+        IF (config_flags%pbl3d_opt < 1) THEN
 !
 BENCH_START(hor_diff_tim)
          !$OMP PARALLEL DO   &
@@ -1047,7 +1075,276 @@ BENCH_START(hor_diff_tim)
          ENDDO
          !$OMP END PARALLEL DO
 BENCH_END(hor_diff_tim)
+        ENDIF
        ENDIF
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! PAJ/TWJ: Adding three dimensional turbulent mixing
+
+       IF (config_flags%bl_pbl_physics .eq. 0 .and. ABS(config_flags%pbl3d_opt) .gt. 0) THEN
+
+#ifdef DM_PARALLEL
+#        include "HALO_EM_PHYS_STATE_PBL3D.inc"
+#        include "PERIOD_BDY_EM_STATE_PBL3D.inc"
+#endif
+
+         !$OMP PARALLEL DO   &
+         !$OMP PRIVATE ( ij )
+         DO ij = 1 , grid%num_tiles
+           CALL wrf_debug ( 200 , ' call phy_bc_state_pbl3d' )
+           CALL phy_bc_state_pbl3d (config_flags,              &
+                grid%u_2, grid%v_2, grid%w_2, grid%t_2,        &
+                grid%thetav, moist(:,:,:,P_QV), grid%rho,      &
+                grid%q_sq_prog_2,                              &
+                ids, ide, jds, jde, kds, kde,                  &
+                ims, ime, jms, jme, kms, kme,                  &
+                ips, ipe, jps, jpe, kps, kpe,                  &
+                grid%i_start(ij), grid%i_end(ij),              &
+                grid%j_start(ij), grid%j_end(ij),              &
+                k_start    , k_end                             )
+         ENDDO
+         !$OMP END PARALLEL DO
+
+         !$OMP PARALLEL DO   &
+         !$OMP PRIVATE ( ij )
+         DO ij = 1 , grid%num_tiles
+           CALL Init_temp_arrays_for_substep (u_2 = grid%u_2, v_2 = grid%v_2, &
+                w_2 = grid%w_2, t_2 = grid%t_2, moist = moist(:,:,:,P_QV), rho = grid%rho, &
+                q_sq_2 = grid%q_sq_prog_2, &
+                u_tmp = grid%u_tmp, v_tmp = grid%v_tmp, w_tmp = grid%w_tmp, &
+                th_tmp = grid%th_tmp, qv_tmp = grid%qv_tmp, rho_tmp = grid%rho_tmp, q_sq_tmp = grid%q_sq_tmp, &
+                ru_tendf_tmp = ru_tendf_tmp, rv_tendf_tmp = rv_tendf_tmp, &
+                rw_tendf_tmp = rw_tendf_tmp, t_tendf_tmp = t_tendf_tmp, &
+                moist_tend_tmp = moist_tend_tmp, q_sq_tend_tmp = q_sq_tend_tmp, &
+                ide = ide, jde = jde, kde = kde, ims = ims, ime = ime, jms = jms, &
+                jme = jme, kms = kms, kme = kme, its = grid%i_start(ij), &
+                ite = grid%i_end(ij), jts = grid%j_start(ij), jte = grid%j_end(ij), &
+                kts = k_start, kte = k_end)
+         END DO
+         !$OMP END PARALLEL DO
+
+           ! Sub-stepping for 3DPBL
+         DO ss = 1, config_flags%pbl3d_nsteps
+
+#ifdef DM_PARALLEL
+#          include "HALO_EM_PHYS_SUBSTEP_PBL3D.inc"
+#          include "PERIOD_BDY_EM_SUBSTEP_PBL3D.inc"
+#endif
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij )
+           DO ij = 1 , grid%num_tiles
+             CALL wrf_debug ( 200 , ' call phy_bc_state_pbl3d' )
+             CALL phy_bc_state_pbl3d (config_flags,                &
+                  grid%u_tmp, grid%v_tmp, grid%w_tmp, grid%th_tmp, &
+                  grid%thetav, grid%qv_tmp, grid%rho_tmp,          &
+                  grid%q_sq_tmp,                                   &
+                  ids, ide, jds, jde, kds, kde,                    &
+                  ims, ime, jms, jme, kms, kme,                    &
+                  ips, ipe, jps, jpe, kps, kpe,                    &
+                  grid%i_start(ij), grid%i_end(ij),                &
+                  grid%j_start(ij), grid%j_end(ij),                &
+                  k_start    , k_end                               )
+           ENDDO
+           !$OMP END PARALLEL DO
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij )
+           DO ij = 1 , grid%num_tiles
+             CALL wrf_debug (200 , ' call Calc_turb_fluxes')
+             CALL Calc_turb_fluxes (config_flags = config_flags, &
+             dz = dz8w, z_at_mass = grid%z, & ! ok
+             u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, th = th_phy, th2 = grid%th_tmp, & ! ok
+             qv = grid%qv_tmp, thetav = grid%thetav, tsk = grid%tsk, t2=grid%t2, q2 = grid%q2, psfc = grid%psfc, & ! ok
+             rho = grid%rho_tmp, ust = grid%ust, hfx = grid%hfx, qfx = grid%qfx, & ! ok
+             rmol = grid%rmol, &
+             du_dx_faces = grid%du_dx_faces, du_dy_faces = grid%du_dy_faces, du_dz_faces = grid%du_dz_faces, &
+             dv_dx_faces = grid%dv_dx_faces, dv_dy_faces = grid%dv_dy_faces, dv_dz_faces = grid%dv_dz_faces, &
+             dw_dx_faces = grid%dw_dx_faces, dw_dy_faces = grid%dw_dy_faces, dw_dz_faces = grid%dw_dz_faces, &
+             dqv_dx_faces = grid%dqv_dx_faces, dqv_dy_faces = grid%dqv_dy_faces, dqv_dz_faces = grid%dqv_dz_faces, &
+             dthetav_dx_faces = grid%dthetav_dx_faces, dthetav_dy_faces = grid%dthetav_dy_faces, dthetav_dz_faces = grid%dthetav_dz_faces, &
+             du_dx_mass = grid%du_dx_mass, du_dy_mass = grid%du_dy_mass, du_dz_mass = grid%du_dz_mass, &
+             dv_dx_mass = grid%dv_dx_mass, dv_dy_mass = grid%dv_dy_mass, dv_dz_mass = grid%dv_dz_mass, &
+             dw_dx_mass = grid%dw_dx_mass, dw_dy_mass = grid%dw_dy_mass, dw_dz_mass = grid%dw_dz_mass, &
+             dthetav_dx_mass = grid%dthetav_dx_mass, dthetav_dy_mass = grid%dthetav_dy_mass, dthetav_dz_mass = grid%dthetav_dz_mass, &
+             dqv_dx_mass = grid%dqv_dx_mass, dqv_dy_mass = grid%dqv_dy_mass, dqv_dz_mass = grid%dqv_dz_mass, &
+             itimestep = grid%itimestep, ss = ss, n_tracer = num_tracer, &
+             q_sq = grid%q_sq, q_sq_pa = grid%q_sq_pa, q_sq_rat = grid%q_sq_rat, q_sq_prog = grid%q_sq_tmp, q_sq_tend = q_sq_tend_tmp, &
+             q_sq_vdiff_tend = grid%q_sq_vdiff, q_sq_hdiff_tend = grid%q_sq_hdiff, q_sq_shear_tend = grid%q_sq_shear, &
+             q_sq_buoyancy_tend = grid%q_sq_buoyancy, q_sq_dissip_tend = grid%q_sq_dissip, &
+             khx = grid%tf_khx, khy = grid%tf_khy, khz = grid%tf_khz, &
+             l_master = grid%l_master, l_master_pa = grid%l_master_pa, l_master_rat = grid%l_master_rat, l_master_at_mass = grid%l_master_at_mass, & ! ok
+             msfux = grid%msfux, msfuy = grid%msfuy, msfvx = grid%msfvx, &
+             msfvy = grid%msfvy, msftx = grid%msftx, msfty = grid%msfty, &
+             dx = grid%dx, dy = grid%dy, &
+             rdx = grid%rdx, rdy = grid%rdy, dn = grid%dn, dnw = grid%dnw, rdz = grid%rdz, dt = grid%dt, id = grid%id,  &
+             rdzw = grid%rdzw, fnm = grid%fnm, fnp = grid%fnp, cf1 = grid%cf1,cf2 = grid%cf2,  &
+             cf3 = grid%cf3, zx = grid%zx, zy = grid%zy, &
+             mut = grid%mut, c1h = grid%c1h, c2h = grid%c2h, &
+             turb_flux_u2 = grid%turb_flux_u2, turb_flux_v2 = grid%turb_flux_v2,& ! OK
+             turb_flux_w2 = grid%turb_flux_w2, turb_flux_uv = grid%turb_flux_uv,& ! OK
+             turb_flux_uw = grid%turb_flux_uw, turb_flux_vw = grid%turb_flux_vw,& ! OK
+             turb_flux_utheta_v = grid%turb_flux_utheta_v, & ! OK
+             turb_flux_vtheta_v = grid%turb_flux_vtheta_v, & ! OK
+             turb_flux_wtheta_v = grid%turb_flux_wtheta_v, & ! OK
+             turb_flux_theta2_v = grid%turb_flux_theta2_v, & ! OK
+             turb_flux_uqv = grid%turb_flux_uqv, turb_flux_vqv = grid%turb_flux_vqv, &
+             turb_flux_wqv = grid%turb_flux_wqv, &
+             turb_flux_utheta = grid%turb_flux_utheta, &
+             turb_flux_vtheta = grid%turb_flux_vtheta, &
+             turb_flux_wtheta = grid%turb_flux_wtheta, &
+             turb_flux_u2_pa = grid%turb_flux_u2_pa, turb_flux_v2_pa = grid%turb_flux_v2_pa,& ! OK
+             turb_flux_w2_pa = grid%turb_flux_w2_pa, turb_flux_uv_pa = grid%turb_flux_uv_pa,& ! OK
+             turb_flux_uw_pa = grid%turb_flux_uw_pa, turb_flux_vw_pa = grid%turb_flux_vw_pa,& ! OK
+             turb_flux_utheta_v_pa = grid%turb_flux_utheta_v_pa, & ! OK
+             turb_flux_vtheta_v_pa = grid%turb_flux_vtheta_v_pa, & ! OK
+             turb_flux_wtheta_v_pa = grid%turb_flux_wtheta_v_pa, & ! OK
+             turb_flux_theta2_v_pa = grid%turb_flux_theta2_v_pa, & ! OK
+             turb_flux_uqv_pa = grid%turb_flux_uqv_pa, turb_flux_vqv_pa = grid%turb_flux_vqv_pa, &
+             turb_flux_wqv_pa = grid%turb_flux_wqv_pa, &
+             turb_flux_utheta_pa = grid%turb_flux_utheta_pa, &
+             turb_flux_vtheta_pa = grid%turb_flux_vtheta_pa, &
+             turb_flux_wtheta_pa = grid%turb_flux_wtheta_pa, &
+             turb_flux_u2_rat = grid%turb_flux_u2_rat, turb_flux_v2_rat = grid%turb_flux_v2_rat,& ! OK
+             turb_flux_w2_rat = grid%turb_flux_w2_rat, turb_flux_uv_rat = grid%turb_flux_uv_rat,& ! OK
+             turb_flux_uw_rat = grid%turb_flux_uw_rat, turb_flux_vw_rat = grid%turb_flux_vw_rat,& ! OK
+             turb_flux_utheta_v_rat = grid%turb_flux_utheta_v_rat, & ! OK
+             turb_flux_vtheta_v_rat = grid%turb_flux_vtheta_v_rat, & ! OK
+             turb_flux_wtheta_v_rat = grid%turb_flux_wtheta_v_rat, & ! OK
+             turb_flux_theta2_v_rat = grid%turb_flux_theta2_v_rat, & ! OK
+             turb_flux_uqv_rat = grid%turb_flux_uqv_rat, turb_flux_vqv_rat = grid%turb_flux_vqv_rat, &
+             turb_flux_wqv_rat = grid%turb_flux_wqv_rat, &
+             turb_flux_utheta_rat = grid%turb_flux_utheta_rat, &
+             turb_flux_vtheta_rat = grid%turb_flux_vtheta_rat, &
+             turb_flux_wtheta_rat = grid%turb_flux_wtheta_rat, &
+             mat_cond_heat = grid%mat_cond_heat, mat_cond_moist = grid%mat_cond_moist, &
+             turb_flux_u2_mass = grid%turb_flux_u2_mass, turb_flux_v2_mass = grid%turb_flux_v2_mass,& ! OK
+             turb_flux_w2_mass = grid%turb_flux_w2_mass, turb_flux_uv_mass = grid%turb_flux_uv_mass,& ! OK
+             turb_flux_uw_mass = grid%turb_flux_uw_mass, turb_flux_vw_mass = grid%turb_flux_vw_mass,& ! OK
+             turb_flux_wtheta_mass = grid%turb_flux_wtheta_mass, &
+             turb_flux_wtheta_v_mass = grid%turb_flux_wtheta_v_mass, &
+             ids = ids, ide = ide, jds = jds, jde = jde, kds = kds, kde = kde, & ! ok
+             ims = ims, ime = ime, jms = jms, jme = jme, kms = kms, kme = kme, & ! ok
+             its = grid%i_start(ij), ite = grid%i_end(ij), & ! ok
+             jts = grid%j_start(ij), jte = grid%j_end(ij), & ! ok
+             kts = k_start, kte = k_end                    & ! ok
+             )
+           END DO
+           !$OMP END PARALLEL DO
+
+#ifdef DM_PARALLEL
+#        include "HALO_EM_PHYS_DIFFUSION_PBL3D.inc"
+#        include "PERIOD_BDY_EM_PHY_BC_PBL3D.inc"
+#endif
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij )
+           DO ij = 1 , grid%num_tiles
+             CALL wrf_debug ( 200 , ' call phy_bc_pbl3d' )
+             CALL phy_bc_pbl3d (config_flags,                    &
+                  grid%turb_flux_u2, grid%turb_flux_v2,          &
+                  grid%turb_flux_w2, grid%turb_flux_uv,          &
+                  grid%turb_flux_uw, grid%turb_flux_vw,          &
+                  grid%turb_flux_utheta, grid%turb_flux_vtheta,  &
+                  grid%turb_flux_wtheta, grid%turb_flux_uqv,     &
+                  grid%turb_flux_vqv, grid%turb_flux_wqv,        &
+                  ids, ide, jds, jde, kds, kde,                  &
+                  ims, ime, jms, jme, kms, kme,                  &
+                  ips, ipe, jps, jpe, kps, kpe,                  &
+                  grid%i_start(ij), grid%i_end(ij),              &
+                  grid%j_start(ij), grid%j_end(ij),              &
+                  k_start    , k_end                             )
+           ENDDO
+           !$OMP END PARALLEL DO
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij )
+           DO ij = 1 , grid%num_tiles
+             CALL wrf_debug (200 , ' call Vertical_turb_mix')
+             CALL Vertical_turb_mix (dth = t_tendf_tmp, du = ru_tendf_tmp, &
+                  dv = rv_tendf_tmp, dw = rw_tendf_tmp, dqv = moist_tend_tmp, &
+                  khz = grid%tf_khz, tracer = tracer, tracer_tend = tracer_tend, &
+                  pbl3d_opt = config_flags%pbl3d_opt, ss = ss, &
+                  config_flags = config_flags, &
+                  turb_flux_wtheta = grid%turb_flux_wtheta, turb_flux_uw = grid%turb_flux_uw, turb_flux_vw = grid%turb_flux_vw, &
+                  turb_flux_w2 = grid%turb_flux_w2, &
+                  turb_flux_wqv = grid%turb_flux_wqv, &
+                  rdz = grid%rdz, dnw = grid%dnw, dn = grid%dn,  rho = grid%rho_tmp, &
+                  fnm = grid%fnm, fnp = grid%fnp,  &
+                  n_tracer = num_tracer, &
+                  ids = ids, ide = ide, jds = jds, jde = jde, kds = kds, kde = kde, &
+                  ims = ims, ime = ime, jms = jms, jme = jme, kms = kms, kme = kme, &
+                  its = grid%i_start(ij), ite = grid%i_end(ij), &
+                  jts = grid%j_start(ij), jte = grid%j_end(ij), &
+                  kts = k_start, kte = k_end                    )
+           END DO
+           !$OMP END PARALLEL DO
+
+           IF (config_flags%pbl3d_opt > 0) THEN
+             !$OMP PARALLEL DO   &
+             !$OMP PRIVATE ( ij )
+             DO ij = 1 , grid%num_tiles
+               CALL wrf_debug (200 , ' call Horizontal_turb_mix')
+               CALL Horizontal_turb_mix (rt_tendf = t_tendf_tmp, ru_tendf = ru_tendf_tmp, rv_tendf = rv_tendf_tmp, &
+                    rw_tendf = rw_tendf_tmp, moist_tendf = moist_tend_tmp, tracer_tend = tracer_tend, &
+                    tracer = tracer, n_tracer = num_tracer, khx = grid%tf_khx, khy = grid%tf_khy, &
+                    ss = ss, config_flags = config_flags, &
+                    turb_flux_u2 = grid%turb_flux_u2, turb_flux_v2 = grid%turb_flux_v2, &
+                    turb_flux_uv = grid%turb_flux_uv, turb_flux_uw = grid%turb_flux_uw, &
+                    turb_flux_vw = grid%turb_flux_vw, turb_flux_w2 = grid%turb_flux_w2, &
+                    turb_flux_utheta = grid%turb_flux_utheta, turb_flux_vtheta = grid%turb_flux_vtheta, &
+                    turb_flux_uqv = grid%turb_flux_uqv, turb_flux_vqv = grid%turb_flux_vqv, &
+                    msfux = grid%msfux, msfuy = grid%msfuy, msfvx = grid%msfvx, msfvy = grid%msfvy, &
+                    msftx = grid%msftx, msfty = grid%msfty, dx = grid%dx, dy = grid%dy, &
+                    rdx = grid%rdx, rdy = grid%rdy, rdz = grid%rdz, rdzw = grid%rdzw, &
+                    fnm = grid%fnm, fnp = grid%fnp, cf1 = grid%cf1, cf2 = grid%cf2, cf3 = grid%cf3,          &
+                    zx = grid%zx, zy = grid%zy, dn = grid%dn, dnw = grid%dnw, rho = grid%rho_tmp, &
+                    ids = ids, ide = ide, jds = jds, jde = jde, kds = kds, kde = kde, &
+                    ims = ims, ime = ime, jms = jms, jme = jme, kms = kms, kme = kme, &
+                    its = grid%i_start(ij), ite = grid%i_end(ij), &
+                    jts = grid%j_start(ij), jte = grid%j_end(ij), &
+                    kts = k_start, kte = k_end                    )
+             END DO
+             !$OMP END PARALLEL DO
+           END IF
+
+           !$OMP PARALLEL DO   &
+           !$OMP PRIVATE ( ij )
+           DO ij = 1 , grid%num_tiles
+             CALL Update_wrf_tends_temp_state_and_zero_tends (ru_tendf = ru_tendf, rv_tendf = rv_tendf, &
+                  rw_tendf = rw_tendf, t_tendf = t_tendf, moist_tend = moist_tend(:,:,:,P_QV), &
+                  q_sq_tend = q_sq_prog_tend, &
+                  ru_tendf_tmp = ru_tendf_tmp, rv_tendf_tmp = rv_tendf_tmp, &
+                  rw_tendf_tmp = rw_tendf_tmp, t_tendf_tmp = t_tendf_tmp, &
+                  moist_tend_tmp = moist_tend_tmp, q_sq_tend_tmp = q_sq_tend_tmp, &
+                  u_tmp = grid%u_tmp, v_tmp = grid%v_tmp, &
+                  w_tmp = grid%w_tmp, th_tmp = grid%th_tmp, qv_tmp = grid%qv_tmp, rho_tmp = grid%rho_tmp, &
+                  q_sq_tmp = grid%q_sq_tmp, &
+                  dt = grid%dt, c1h = grid%c1h, c2h = grid%c2h, c1f = grid%c1f, &
+                  c2f = grid%c2f, muu = grid%muu, muv = grid%muv, mut = grid%mut, &
+                  ide = ide, jde = jde, kde = kde, ims = ims, ime = ime, jms = jms, &
+                  jme = jme, kms = kms, kme = kme, its = grid%i_start(ij), &
+                  ite = grid%i_end(ij), jts = grid%j_start(ij), jte = grid%j_end(ij), &
+                  kts = k_start, kte = k_end)
+           END DO
+           !$OMP END PARALLEL DO
+
+
+         END DO ! Sub-stepping for 3DPBL
+
+         !$OMP PARALLEL DO   &
+         !$OMP PRIVATE ( ij )
+         DO ij = 1 , grid%num_tiles
+           CALL Deallocate_temp_tends (ru_tendf_tmp = ru_tendf_tmp, &
+                rv_tendf_tmp = rv_tendf_tmp, rw_tendf_tmp = rw_tendf_tmp, &
+                t_tendf_tmp = t_tendf_tmp, moist_tend_tmp = moist_tend_tmp, &
+                q_sq_tend_tmp = q_sq_tend_tmp, &
+                its = grid%i_start(ij), ite = grid%i_end(ij), jts = grid%j_start(ij), &
+                jte = grid%j_end(ij), kts = k_start, kte = k_end)
+         END DO
+         !$OMP END PARALLEL DO
+
+       END IF
 
 ! 
 !***********************************************************************

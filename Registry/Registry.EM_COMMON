@@ -1144,6 +1144,136 @@ state   integer  nupdraft       ij     misc        1         -      h         "n
 state   integer  ktop_plume     ij     misc        1         -      h         "ktop_plume"       "k-level of highest pentrating plume"    ""
 state   real   maxMF            ij     misc        1         -      h         "maxMF"            "Maximum mass-flux (neg: all dry, pos: moist)"   "m/s * area"
 
+# Additional for PBL3D
+state   real   thetav                ikj     misc        1         -      irh      "thetav"            "Virtual potential temperature"  "K"
+state   real   q_sq                  ikj     misc        1         Z      irh      "q_sq"              "Twice TKE"  "m2 s-2"
+state   real   q_sq_shear            ikj     misc        1         -      irh      "q_sq_shear"        "TKE shear"  "m2 s-2"
+state   real   q_sq_buoyancy         ikj     misc        1         -      irh      "q_sq_buoyancy"     "TKE buoyancy"  "m2 s-2"
+state   real   q_sq_dissip           ikj     misc        1         -      irh      "q_sq_dissip"       "TKE dissipation"  "m2 s-2"
+state   real   q_sq_vdiff            ikj     misc        1         -      irh      "q_sq_vdiff"        "TKE vertical diffusion"  "m2 s-2"
+state   real   q_sq_hdiff            ikj     misc        1         -      irh      "q_sq_hdiff"        "TKE horizontal diffusion"  "m2 s-2"
+state   real   q_sq_pa               ikj     misc        1         Z      irh      "q_sq_pa"           "Twice TKE"  "m2 s-2"
+state   real   q_sq_rat              ikj     misc        1         Z      irh      "q_sq_rat"          "Twice TKE ratio"  ""
+state   real   turb_flux_u2          ikj     misc        1         Z      irh      "turb_flux_u2"      "u variance"  "m2 s-2"
+state   real   turb_flux_v2          ikj     misc        1         Z      irh      "turb_flux_v2"      "v variance"  "m2 s-2"
+state   real   turb_flux_w2          ikj     misc        1         Z      irh      "turb_flux_w2"      "w variance"  "m2 s-2"
+state   real   turb_flux_uw          ikj     misc        1         Z      irh      "turb_flux_uw"      "u w covariance"  "m2 s-2"
+state   real   turb_flux_vw          ikj     misc        1         Z      irh      "turb_flux_vw"      "v w covariance"  "m2 s-2"
+state   real   turb_flux_uv          ikj     misc        1         Z      irh      "turb_flux_uv"      "u v covariance"  "m2 s-2"
+state   real   turb_flux_utheta      ikj     misc        1         Z      irh      "turb_flux_utheta"  "u theta covariance"  "K m s-1"
+state   real   turb_flux_vtheta      ikj     misc        1         Z      irh      "turb_flux_vtheta"  "v theta covariance"  "K m s-1"
+state   real   turb_flux_wtheta      ikj     misc        1         Z      irh      "turb_flux_wtheta"  "w theta covariance"  "K m s-1"
+state   real   turb_flux_utheta_v    ikj     misc        1         Z      irh      "turb_flux_utheta_v"  "u theta_virtual covariance" "K m s-1"
+state   real   turb_flux_vtheta_v    ikj     misc        1         Z      irh      "turb_flux_vtheta_v"  "v theta_virtual covariance" "K m s-1"
+state   real   turb_flux_wtheta_v    ikj     misc        1         Z      irh      "turb_flux_wtheta_v"  "w theta_virtual covariance" "K m s-1"
+state   real   turb_flux_theta2_v    ikj     misc        1         Z      irh      "turb_flux_theta2_v"  "theta_virtual variance" "K2"
+state   real   turb_flux_uqv         ikj     misc        1         Z      irh      "turb_flux_uqv"  "u qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_vqv         ikj     misc        1         Z      irh      "turb_flux_vqv"  "v qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_wqv         ikj     misc        1         Z      irh      "turb_flux_wqv"  "w qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_u2_pa       ikj     misc        1         Z      irh      "turb_flux_u2_pa"      "u variance"  "m2 s-2"
+state   real   turb_flux_v2_pa       ikj     misc        1         Z      irh      "turb_flux_v2_pa"      "v variance"  "m2 s-2"
+state   real   turb_flux_w2_pa       ikj     misc        1         Z      irh      "turb_flux_w2_pa"      "w variance"  "m2 s-2"
+state   real   turb_flux_uw_pa       ikj     misc        1         Z      irh      "turb_flux_uw_pa"      "u w covariance"  "m2 s-2"
+state   real   turb_flux_vw_pa       ikj     misc        1         Z      irh      "turb_flux_vw_pa"      "v w covariance"  "m2 s-2"
+state   real   turb_flux_uv_pa       ikj     misc        1         Z      irh      "turb_flux_uv_pa"      "u v covariance"  "m2 s-2"
+state   real   turb_flux_utheta_pa   ikj     misc        1         Z      irh      "turb_flux_utheta_pa"  "u theta covariance"  "K m s-1"
+state   real   turb_flux_vtheta_pa   ikj     misc        1         Z      irh      "turb_flux_vtheta_pa"  "v theta covariance"  "K m s-1"
+state   real   turb_flux_wtheta_pa   ikj     misc        1         Z      irh      "turb_flux_wtheta_pa"  "w theta covariance"  "K m s-1"
+state   real   turb_flux_utheta_v_pa ikj     misc        1         Z      irh      "turb_flux_utheta_v_pa"  "u theta_virtual covariance" "K m s-1"
+state   real   turb_flux_vtheta_v_pa ikj     misc        1         Z      irh      "turb_flux_vtheta_v_pa"  "v theta_virtual covariance" "K m s-1"
+state   real   turb_flux_wtheta_v_pa ikj     misc        1         Z      irh      "turb_flux_wtheta_v_pa"  "w theta_virtual covariance" "K m s-1"
+state   real   turb_flux_theta2_v_pa ikj     misc        1         Z      irh      "turb_flux_theta2_v_pa"  "theta_virtual variance" "K2"
+state   real   turb_flux_uqv_pa      ikj     misc        1         Z      irh      "turb_flux_uqv_pa"  "u qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_vqv_pa      ikj     misc        1         Z      irh      "turb_flux_vqv_pa"  "v qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_wqv_pa      ikj     misc        1         Z      irh      "turb_flux_wqv_pa"  "w qv covariance"  "kg kg-1 m s-1"
+state   real   turb_flux_u2_rat          ikj     misc        1         Z      irh       "turb_flux_u2_rat"      "u variance ratio"  " "
+state   real   turb_flux_v2_rat          ikj     misc        1         Z      irh       "turb_flux_v2_rat"      "v variance ratio"  " "
+state   real   turb_flux_w2_rat          ikj     misc        1         Z      irh       "turb_flux_w2_rat"      "w variance ratio"  " "
+state   real   turb_flux_uw_rat          ikj     misc        1         Z      irh       "turb_flux_uw_rat"      "u w covariance ratio"  " "
+state   real   turb_flux_vw_rat          ikj     misc        1         Z      irh       "turb_flux_vw_rat"      "v w covariance ratio"  " "
+state   real   turb_flux_uv_rat          ikj     misc        1         Z      irh       "turb_flux_uv_rat"      "u v covariance ratio"  " "
+state   real   turb_flux_utheta_rat      ikj     misc        1         Z      irh       "turb_flux_utheta_rat"  "u theta covariance ratio"  " "
+state   real   turb_flux_vtheta_rat      ikj     misc        1         Z      irh       "turb_flux_vtheta_rat"  "v theta covariance ratio"  " "
+state   real   turb_flux_wtheta_rat      ikj     misc        1         Z      irh       "turb_flux_wtheta_rat"  "w theta covariance ratio"  " "
+state   real   turb_flux_utheta_v_rat    ikj     misc        1         Z      irh       "turb_flux_utheta_v_rat"  "u theta_virtual covariance ratio" " "
+state   real   turb_flux_vtheta_v_rat    ikj     misc        1         Z      irh       "turb_flux_vtheta_v_rat"  "v theta_virtual covariance ratio" " "
+state   real   turb_flux_wtheta_v_rat    ikj     misc        1         Z      irh       "turb_flux_wtheta_v_rat"  "w theta_virtual covariance ratio" " "
+state   real   turb_flux_theta2_v_rat    ikj     misc        1         Z      irh       "turb_flux_theta2_v_rat"  "theta_virtual variance ratio" " "
+state   real   turb_flux_uqv_rat         ikj     misc        1         Z      irh       "turb_flux_uqv_rat"  "u qv covariance ratio"  " "
+state   real   turb_flux_vqv_rat         ikj     misc        1         Z      irh       "turb_flux_vqv_rat"  "v qv covariance ratio"  " "
+state   real   turb_flux_wqv_rat         ikj     misc        1         Z      irh       "turb_flux_wqv_rat"  "w qv covariance ratio"  " "
+state   real   turb_flux_u2_mass     ikj     misc        1         -       -       "turb_flux_u2_mass"      "u variance"  "m2 s-2"
+state   real   turb_flux_v2_mass     ikj     misc        1         -       -       "turb_flux_v2_mass"      "v variance"  "m2 s-2"
+state   real   turb_flux_w2_mass     ikj     misc        1         -       -       "turb_flux_w2_mass"      "w variance"  "m2 s-2"
+state   real   turb_flux_uw_mass     ikj     misc        1         -       r       "turb_flux_uw_mass"      "u w covariance"  "m2 s-2"
+state   real   turb_flux_vw_mass     ikj     misc        1         -       r       "turb_flux_vw_mass"      "v w covariance"  "m2 s-2"
+state   real   turb_flux_uv_mass     ikj     misc        1         -       -       "turb_flux_uv_mass"      "u v covariance"  "m2 s-2"
+state   real   turb_flux_wtheta_mass ikj     misc        1         -       -       "turb_flux_wtheta_mass"  "w theta covariance"  "K m s-1"
+state   real   turb_flux_wtheta_v_mass ikj     misc        1         -       r       "turb_flux_wtheta_v_mass"  "w theta_virtual covariance"  "K m s-1"
+state   real   l_master              ikj     misc        1         Z      irh      "l_master"            "Master length scale"    "m"
+state   real   l_master_at_mass      ikj     misc        1         -       r       "l_master_mass"       "Master length scale"    "m"
+state   real   l_master_pa           ikj     misc        1         Z      irh      "l_master_pa"         "Master length scale"    "m"
+state   real   l_master_rat          ikj     misc        1         Z      irh      "l_master_rat"        "Master length scale ratio"  ""
+state   real   du_dx_faces           ikj     misc        1         Z      irh      "du_dx_faces"         "partial u over partial x"    "s-1"
+state   real   du_dy_faces           ikj     misc        1         Z      irh      "du_dy_faces"         "partial u over partial y"    "s-1"
+state   real   du_dz_faces           ikj     misc        1         Z      irh      "du_dz_faces"         "partial u over partial z"    "s-1"
+state   real   dv_dx_faces           ikj     misc        1         Z      irh      "dv_dx_faces"         "partial v over partial x"    "s-1"
+state   real   dv_dy_faces           ikj     misc        1         Z      irh      "dv_dy_faces"         "partial v over partial y"    "s-1"
+state   real   dv_dz_faces           ikj     misc        1         Z      irh      "dv_dz_faces"         "partial v over partial z"    "s-1"
+state   real   dw_dx_faces           ikj     misc        1         Z      irh      "dw_dx_faces"         "partial w over partial x"    "s-1"
+state   real   dw_dy_faces           ikj     misc        1         Z      irh      "dw_dy_faces"         "partial w over partial y"    "s-1"
+state   real   dw_dz_faces           ikj     misc        1         Z      irh      "dw_dz_faces"         "partial w over partial z"    "s-1"
+state   real   dthetav_dx_faces      ikj     misc        1         Z      irh      "dthetav_dx_faces"    "partial theta_v over partial x"    "K m-1"
+state   real   dthetav_dy_faces      ikj     misc        1         Z      irh      "dthetav_dy_faces"    "partial theta_v over partial y"    "K m-1"
+state   real   dthetav_dz_faces      ikj     misc        1         Z      irh      "dthetav_dz_faces"    "partial theta_v over partial z"    "K m-1"
+state   real   dqv_dx_faces          ikj     misc        1         Z      irh      "dqv_dx_faces"        "partial qv over partial x"    "kg kg-1 m-1"
+state   real   dqv_dy_faces          ikj     misc        1         Z      irh      "dqv_dy_faces"        "partial qv over partial y"    "kg kg-1 m-1"
+state   real   dqv_dz_faces          ikj     misc        1         Z      irh      "dqv_dz_faces"        "partial qv over partial z"    "kg kg-1 m-1"
+state   real   du_dx_mass            ikj     misc        1         -       -       "du_dx_mass"          "partial u over partial x"    "s-1"
+state   real   du_dy_mass            ikj     misc        1         -       -       "du_dy_mass"          "partial u over partial y"    "s-1"
+state   real   du_dz_mass            ikj     misc        1         -       -       "du_dz_mass"          "partial u over partial z"    "s-1"
+state   real   dv_dx_mass            ikj     misc        1         -       -       "dv_dx_mass"          "partial v over partial x"    "s-1"
+state   real   dv_dy_mass            ikj     misc        1         -       -       "dv_dy_mass"          "partial v over partial y"    "s-1"
+state   real   dv_dz_mass            ikj     misc        1         -       -       "dv_dz_mass"          "partial v over partial z"    "s-1"
+state   real   dw_dx_mass            ikj     misc        1         -       -       "dw_dx_mass"          "partial w over partial x"    "s-1"
+state   real   dw_dy_mass            ikj     misc        1         -       -       "dw_dy_mass"          "partial w over partial y"    "s-1"
+state   real   dw_dz_mass            ikj     misc        1         -       -       "dw_dz_mass"          "partial w over partial z"    "s-1"
+state   real   dthetav_dx_mass       ikj     misc        1         -       -       "dthetav_dx_mass"     "partial theta_v over partial x"    "K m-1"
+state   real   dthetav_dy_mass       ikj     misc        1         -       -       "dthetav_dy_mass"     "partial theta_v over partial y"    "K m-1"
+state   real   dthetav_dz_mass       ikj     misc        1         -       -       "dthetav_dz_mass"     "partial theta_v over partial z"    "K m-1"
+state   real   dqv_dx_mass           ikj     misc        1         -       -       "dqv_dx_mass"         "partial qv over partial x"    "kg kg-1 m-1"
+state   real   dqv_dy_mass           ikj     misc        1         -       -       "dqv_dy_mass"         "partial qv over partial y"    "kg kg-1 m-1"
+state   real   dqv_dz_mass           ikj     misc        1         -       -       "dqv_dz_mass"         "partial qv over partial z"    "kg kg-1 m-1"
+
+state   real   u_tmp                 ikj     misc        1         X       r       "u_tmp"         "u  temporary array"    "m s-1"
+state   real   v_tmp                 ikj     misc        1         Y       r       "v_tmp"         "v  temporary array"    "m s-1"
+state   real   w_tmp                 ikj     misc        1         Z       r       "w_tmp"         "w  temporary array"    "m s-1"
+state   real   th_tmp                ikj     misc        1         -       r       "th_tmp"        "th temporary array"    "K"
+state   real   qv_tmp                ikj     misc        1         -       r       "qv_tmp"        "qv temporary array"    "g kg-1"
+state   real   rho_tmp               ikj     misc        1         -       r       "rho_tmp"       "rho temporary array"   "kg m-3"
+state   real   q_sq_tmp              ikj     misc        1         -       r       "q_sq_tmp"      "q_sq temporary array"  "m2 s-2"
+
+state   real   q_sq_prog             ikj     dyn_em      2         -       rh      "q_sq_prog"      "Prognostic Twice TKE"     "m2 s-2"
+i1      real   q_sq_prog_tend        ikj     dyn_em      1         -
+
+state   real   phi_fl                ikj     misc        1         -       -       "phi_fl"         "Phi for flux limiter"    ""
+state   real   tf_khx                ikj     misc        1         Z       -       "tf_khx"         "Eddy diffusivity of heat x direction"    "m2 s-1"
+state   real   tf_khy                ikj     misc        1         Z       -       "tf_khy"         "Eddy diffusivity of heat y direction"    "m2 s-1"
+state   real   tf_khz                ikj     misc        1         Z       -       "tf_khz"         "Eddy diffusivity of heat z direction"    "m2 s-1"
+
+state   real   mat_cond_heat         ikj     misc        1         Z        h      "mat_cond_heat"       "Condition number for matrix"    ""
+state   real   mat_cond_moist        ikj     misc        1         Z        h      "mat_cond_moist"      "Condition number for matrix"    ""
+
+rconfig  character pbl3d_constants      namelist,dynamics          1       "MY82"    -     "pbl3d_constants"      "Set of model constants"  ""
+rconfig  integer   pbl3d_opt            namelist,dynamics    max_domains      0      -     "pbl3d_opt"            "PBL3D mixing option" ""
+rconfig  integer   pbl3d_sfc_opt        namelist,dynamics    max_domains      0      -     "pbl3d_sfc_opt"        "PBL3D surface option" ""
+rconfig  integer   pbl3d_l_opt          namelist,dynamics    max_domains      1      -     "pbl3d_l_opt"          "PBL3D l option" ""
+rconfig  integer   pbl3d_nsteps         namelist,dynamics    max_domains      1      -     "pbl3d_nsteps"         "PBL3D number of substeps" ""
+rconfig  integer   pbl3d_prog           namelist,dynamics    max_domains      0      -     "pbl3d_prog"           "PBL3D prognostic TKE" ""
+rconfig  integer   flux_limiter_w       namelist,dynamics    max_domains      0      -     "flux_limiter_w"       "Flux limiter on vertical advection of w" ""
+rconfig  integer   replace_with_pa      namelist,dynamics    max_domains      0      -     "replace_with_pa"      "Replace low q/l vals with PBL approx" ""
+rconfig  real      replace_with_pa_rat  namelist,dynamics    max_domains    0.001    -     "replace_with_pa_rat"  "q/l threshold for replace with PBL approx" ""
+
 #FogDES variables
 state   real   fgdp             ij     misc        1         -      -        "fgdp"                "Accumulated fog deposition"    "mm"
 state   real   dfgdp            ij     misc        1         -      -        "dfgdp"               "Fog deposition during timestep"    "mm"
@@ -2811,6 +2941,8 @@ rconfig   integer     h_mom_adv_order     namelist,dynamics	max_domains    5    
 rconfig   integer     v_mom_adv_order     namelist,dynamics	max_domains    3       rh       "v_mom_adv_order"               ""      ""
 rconfig   integer     h_sca_adv_order     namelist,dynamics	max_domains    5       rh       "h_sca_adv_order"               ""      ""
 rconfig   integer     v_sca_adv_order     namelist,dynamics	max_domains    3       rh       "v_sca_adv_order"               ""      ""
+rconfig   integer   h_pbl3d_adv_order     namelist,dynamics     max_domains    5       rh       "h_pbl3d_adv_order"               ""      ""
+rconfig   integer   v_pbl3d_adv_order     namelist,dynamics     max_domains    3       rh       "v_pbl3d_adv_order"               ""      ""
 rconfig   integer  momentum_adv_opt       namelist,dynamics     max_domains    1       rh    "momentum_adv_opt"      "weno RK3 transport switch"      ""
 rconfig   integer  moist_adv_opt          namelist,dynamics	max_domains    1       rh    "moist_adv_opt"         "positive-definite RK3 transport switch"      ""
 rconfig   integer  moist_adv_dfi_opt      namelist,dynamics	max_domains    0       rh    "moist_adv_dfi_opt"     "positive-definite RK3 transport switch"      ""
@@ -2818,6 +2950,7 @@ rconfig   integer  chem_adv_opt           namelist,dynamics	max_domains    1    
 rconfig   integer  tracer_adv_opt         namelist,dynamics     max_domains    1       rh    "tracer_adv_opt"        "positive-definite RK3 transport switch"      ""
 rconfig   integer  scalar_adv_opt         namelist,dynamics	max_domains    1       rh    "scalar_adv_opt"        "positive-definite RK3 transport switch"      ""
 rconfig   integer  tke_adv_opt            namelist,dynamics	max_domains    1       rh    "tke_adv_opt"           "positive-definite RK3 transport switch"      ""
+rconfig   integer  pbl3d_adv_opt          namelist,dynamics     max_domains    1       rh    "pbl3d_adv_opt"         "positive-definite RK3 transport switch"      ""
 rconfig   integer  phi_adv_z              namelist,dynamics	max_domains    1       h     "phi_adv_z"             "Vertical advection option for geopotential; 1: original 2: avoid double staggering of omega"   ""
 # switches for selectively deactivating 2nd and 6th order horizontal filters for specific scalar variable classes
 rconfig   logical  moist_mix2_off         namelist,dynamics	max_domains    .false. rh    "moist_mix2_off"        "de-activate 2nd-order horizontal mixing for moisture"      ""
@@ -2825,12 +2958,14 @@ rconfig   logical  chem_mix2_off          namelist,dynamics	max_domains    .fals
 rconfig   logical  tracer_mix2_off        namelist,dynamics	max_domains    .false. rh    "tracer_mix2_off"       "de-activate 2nd-order horizontal mixing for tracers"       ""
 rconfig   logical  scalar_mix2_off        namelist,dynamics	max_domains    .false. rh    "scalar_mix2_off"       "de-activate 2nd-order horizontal mixing for scalars"       ""
 rconfig   logical  tke_mix2_off           namelist,dynamics	max_domains    .false. rh    "tke_mix2_off"          "de-activate 2nd-order horizontal mixing for tke"           ""
+rconfig   logical  pbl3d_mix2_off         namelist,dynamics     max_domains    .false. rh    "pbl3d_mix2_off"        "de-activate 2nd-order horizontal mixing for q_sq_prog"     ""
 #
 rconfig   logical  moist_mix6_off         namelist,dynamics	max_domains    .false. rh    "moist_mix6_off"        "de-activate 6th-order horizontal filter for moisture"      ""
 rconfig   logical  chem_mix6_off          namelist,dynamics	max_domains    .false. rh    "chem_mix6_off"         "de-activate 6th-order horizontal filter for chem species"  ""
 rconfig   logical  tracer_mix6_off        namelist,dynamics	max_domains    .false. rh    "tracer_mix6_off"       "de-activate 6th-order horizontal filter for tracers"       ""
 rconfig   logical  scalar_mix6_off        namelist,dynamics	max_domains    .false. rh    "scalar_mix6_off"       "de-activate 6th-order horizontal filter for scalars"       ""
 rconfig   logical  tke_mix6_off           namelist,dynamics	max_domains    .false. rh    "tke_mix6_off"          "de-activate 6th-order horizontal filter for tke"           ""
+rconfig   logical  pbl3d_mix6_off         namelist,dynamics     max_domains    .false. rh    "pbl3d_mix6_off"        "de-activate 6th-order horizontal filter for q_sq_prog"     ""
 #
 rconfig   logical top_radiation           namelist,dynamics	max_domains    .false. rh    "top_radiation"         ""      ""
 rconfig   integer mix_isotropic           namelist,dynamics     max_domains    0       h    "mix_isotropic"            "0=anistropic, 1=isotropic"      ""
@@ -3330,7 +3465,7 @@ package   clnatmdiag     calc_clean_atm_diag==1      -            state:SWUPTCLN
 
 # Halo Update Communications
 halo      HALO_EM_INIT_1 dyn_em 48:u_1,u_2,v_1,v_2,w_1,w_2,ph_1,ph_2
-halo      HALO_EM_INIT_2 dyn_em 48:t_1,t_2,mu_1,mu_2,tke_1,tke_2,ww,phb
+halo      HALO_EM_INIT_2 dyn_em 48:t_1,t_2,mu_1,mu_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,ww,phb
 halo      HALO_EM_INIT_3 dyn_em 48:ph0,php,t_init,mub,mu0,p,al,alt,alb
 halo      HALO_EM_INIT_4 dyn_em 48:pb,h_diabatic,qv_diabatic,qc_diabatic,msftx,msfty,msfux,msfuy,msfvx,msfvy,msfvx_inv,f,e,sina,cosa,ht,potevp,snopcx,soiltb,xlat,xlong,xlat_u,xlat_v,xlong_u,xlong_v,clat,msft,msfu,msfv
 halo      HALO_EM_INIT_5 dyn_em 48:moist,chem,scalar,tracer
@@ -3344,9 +3479,14 @@ halo      HALO_EM_PHYS_SHCU dyn_em       4:rushten,rvshten
 halo      HALO_EM_FDDA dyn_em            4:rundgdten,rvndgdten
 halo      HALO_EM_FDDA_SFC dyn_em 48:z,z_at_w,pblh,regime,znt,odis_ndg_old,odis_ndg_new
 halo      HALO_EM_PHYS_DIFFUSION dyn_em  4:defor11,defor22,defor12,defor13,defor23,div,xkmv,xkmh,xkhv,xkhh,tke_1,tke_2
+halo      HALO_EM_PHYS_STATE_PBL3D dyn_em 8:u_2,v_2,t_2,thetav,moist,rho,q_sq_prog_2;24:w_2
+halo      HALO_EM_PHYS_DIFFUSION_PBL3D dyn_em  8:turb_flux_u2,turb_flux_v2,turb_flux_w2,turb_flux_uv,turb_flux_utheta,turb_flux_vtheta,turb_flux_wtheta,turb_flux_uqv,turb_flux_vqv,turb_flux_wqv;24:turb_flux_uw,turb_flux_vw
+halo      HALO_EM_PHYS_SUBSTEP_PBL3D dyn_em  8:u_tmp,v_tmp,th_tmp,qv_tmp,rho_tmp,q_sq_tmp;24:w_tmp
 halo      HALO_EM_SBM dyn_em 8:p_phy,pi_phy,dz8w,th_phy,rho,qv_old,th_old,u_phy,v_phy,moist
 halo      HALO_EM_TKE_ADVECT_3 dyn_em 24:tke_2
 halo      HALO_EM_TKE_ADVECT_5 dyn_em 48:tke_2
+halo      HALO_EM_PBL3D_ADVECT_3 dyn_em 24:q_sq_prog_2
+halo      HALO_EM_PBL3D_ADVECT_5 dyn_em 48:q_sq_prog_2
 halo      HALO_EM_TKE_A dyn_em 4:ph_2,phb
 halo      HALO_EM_TKE_B dyn_em 4:z,rdz,rdzw,zx,zy
 halo      HALO_EM_TKE_C dyn_em 8:u_2,v_2,z,zx,zy,rdz,rdzw,ustm,ust
@@ -3355,8 +3495,13 @@ halo      HALO_EM_TKE_E dyn_em 8:xkmv,xkmh,xkhv,xkhh,BN2,moist,rho,gamu,gamv,xkm
 halo      HALO_EM_TKE_3 dyn_em   24:tke_1,tke_2
 halo      HALO_EM_TKE_5 dyn_em   48:tke_1,tke_2
 halo      HALO_EM_TKE_7 dyn_em   80:tke_1,tke_2
+halo      HALO_EM_PBL3D_3 dyn_em   24:q_sq_prog_1,q_sq_prog_2
+halo      HALO_EM_PBL3D_5 dyn_em   48:q_sq_prog_1,q_sq_prog_2
+halo      HALO_EM_PBL3D_7 dyn_em   80:q_sq_prog_1,q_sq_prog_2
 halo      HALO_EM_TKE_OLD_E_5 dyn_em   48:tke_1
 halo      HALO_EM_TKE_OLD_E_7 dyn_em   80:tke_1
+halo      HALO_EM_PBL3D_OLD_E_5 dyn_em   48:q_sq_prog_1
+halo      HALO_EM_PBL3D_OLD_E_7 dyn_em   80:q_sq_prog_1
 halo      HALO_EM_HELICITY dyn_em 48:u_2,v_2,w_2,ph_2,zx,zy,rdz,rdzw
 halo      HALO_EM_B dyn_em 4:ph_2,al,p,t_1,t_save,u_save,v_save,mu_1,mu_2,mudf,php,alt,pb
 halo      HALO_EM_B2 dyn_em 4:ru_tend,rv_tend
@@ -3364,12 +3509,12 @@ halo      HALO_EM_C dyn_em    4:u_2,v_2
 halo      HALO_EM_C2 dyn_em    4:ph_2,al,p,mu_2,muts,mudf
 halo      HALO_EM_D dyn_em    24:ru_m,rv_m,ww_m,mut,muts
 halo      HALO_EM_D_PV dyn_em 24:u_2,v_2,t_2
-halo      HALO_EM_D2_3 dyn_em 24:u_2,v_2,w_2,t_2,ph_2;24:moist,chem,tracer,scalar,tke_2;4:mu_2,al
-halo      HALO_EM_D2_5 dyn_em 48:u_2,v_2,w_2,t_2,ph_2;24:moist,chem,tracer,scalar,tke_2;4:mu_2,al
-halo      HALO_EM_D3_3 dyn_em 24:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,moist,chem,tracer,scalar;4:mu_1,mu_2
-halo      HALO_EM_D3_5 dyn_em 48:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,moist,chem,tracer,scalar;4:mu_1,mu_2
-halo      HALO_EM_E_3 dyn_em 24:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,;4:mu_1,mu_2
-halo      HALO_EM_E_5 dyn_em 48:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,;4:mu_1,mu_2
+halo      HALO_EM_D2_3 dyn_em 24:u_2,v_2,w_2,t_2,ph_2;24:moist,chem,tracer,scalar,tke_2,q_sq_prog_2;4:mu_2,al
+halo      HALO_EM_D2_5 dyn_em 48:u_2,v_2,w_2,t_2,ph_2;24:moist,chem,tracer,scalar,tke_2,q_sq_prog_2;4:mu_2,al
+halo      HALO_EM_D3_3 dyn_em 24:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,moist,chem,tracer,scalar;4:mu_1,mu_2
+halo      HALO_EM_D3_5 dyn_em 48:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,moist,chem,tracer,scalar;4:mu_1,mu_2
+halo      HALO_EM_E_3 dyn_em 24:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,;4:mu_1,mu_2
+halo      HALO_EM_E_5 dyn_em 48:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,;4:mu_1,mu_2
 halo      HALO_EM_MOIST_E_3 dyn_em 24:moist
 halo      HALO_EM_MOIST_E_5 dyn_em 48:moist
 halo      HALO_EM_MOIST_E_7 dyn_em 80:moist
@@ -3438,6 +3583,7 @@ period    PERIOD_BDY_EM_CHEM dyn_em 4:chem
 period    PERIOD_BDY_EM_TRACER dyn_em 4:tracer
 period    PERIOD_BDY_EM_SCALAR dyn_em 4:scalar
 period    PERIOD_BDY_EM_TKE dyn_em 4:tke_2
+period    PERIOD_BDY_EM_PBL3D dyn_em 4:q_sq_prog_2
 period    PERIOD_BDY_EM_MOIST2 dyn_em 4:moist
 period    PERIOD_BDY_EM_CHEM2 dyn_em 4:chem
 period    PERIOD_BDY_EM_TRACER2 dyn_em 4:tracer
@@ -3447,19 +3593,23 @@ period    PERIOD_BDY_EM_CHEM_OLD dyn_em 4:chem_old
 period    PERIOD_BDY_EM_TRACER_OLD dyn_em 4:tracer_old
 period    PERIOD_BDY_EM_SCALAR_OLD dyn_em 4:scalar_old
 period    PERIOD_BDY_EM_TKE_OLD dyn_em 4:tke_1
+period    PERIOD_BDY_EM_PBL3D_OLD dyn_em 4:q_sq_prog_1
 
 period    PERIOD_BDY_EM_E dyn_em 2:u_2,v_2,ht
 period    PERIOD_EM_HYDRO_UV dyn_em 1:u_2,v_2
 period    PERIOD_BDY_EM_A dyn_em 2:ru,rv,rw,ww,php,alt,p,muu,muv,mut,ph_2,al,rho
 period    PERIOD_BDY_EM_A1  dyn_em 3:rdzw,rdz,z,zx,zy,ustm,ust
 period    PERIOD_BDY_EM_PHY_BC dyn_em 2:rublten,rvblten,rucuten,rvcuten,xkmh,xkmv,xkhh,xkhv,div,defor11,defor22,defor12,defor13,defor23,defor33,tke_2,rho,gamu,gamv,xkmv_meso
+period    PERIOD_BDY_EM_STATE_PBL3D dyn_em 2:u_2,v_2,w_2,t_2,thetav,moist,rho,q_sq_prog_2
+period    PERIOD_BDY_EM_SUBSTEP_PBL3D dyn_em 2:u_tmp,v_tmp,w_tmp,th_tmp,qv_tmp,rho_tmp,q_sq_tmp
+period    PERIOD_BDY_EM_PHY_BC_PBL3D dyn_em 2:turb_flux_u2,turb_flux_v2,turb_flux_w2,turb_flux_uw,turb_flux_vw,turb_flux_uv,turb_flux_utheta,turb_flux_vtheta,turb_flux_wtheta,turb_flux_uqv,turb_flux_vqv,turb_flux_wqv
 period    PERIOD_BDY_EM_FDDA_BC dyn_em 2:rundgdten,rvndgdten
 period    PERIOD_BDY_EM_B dyn_em 2:ru_tend,rv_tend,ph_2,al,p,t_1,t_save,u_save,v_save,mu_1,mu_2,mudf,php,alt,pb
 period    PERIOD_BDY_EM_B3 dyn_em 2:ph_2,al,p,mu_2,muts,mudf
 period    PERIOD_BDY_EM_B2 dyn_em 2:ru_tend,rv_tend
 period    PERIOD_BDY_EM_C dyn_em 2:u_2,u_save,v_2,v_save,t_2,t_save,muv,msfvx,msfvy,muu,msfux,msfuy,msfvx_inv
-period    PERIOD_BDY_EM_D dyn_em 3:u_2,v_2,w_2,t_2,ph_2,mu_2,tke_2
-period    PERIOD_BDY_EM_D3 dyn_em 3:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,mu_1,mu_2
+period    PERIOD_BDY_EM_D dyn_em 3:u_2,v_2,w_2,t_2,ph_2,mu_2,tke_2,q_sq_prog_2
+period    PERIOD_BDY_EM_D3 dyn_em 3:u_1,u_2,v_1,v_2,w_1,w_2,t_1,t_2,ph_1,ph_2,tke_1,tke_2,q_sq_prog_1,q_sq_prog_2,mu_1,mu_2
 period    PERIOD_EM_DA dyn_em 2:ru_m,rv_m,ww_m,mut,muts
 period    PERIOD_EM_F dyn_em 2:muus,muvs
 period    PERIOD_EM_G dyn_em 2:msftx,msfux,msfvy
