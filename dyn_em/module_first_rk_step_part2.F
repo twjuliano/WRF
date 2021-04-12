@@ -66,7 +66,7 @@ CONTAINS
     USE module_sfs_driver !JDM
     USE module_stoch, ONLY : update_stoch_ten, perturb_physics_tend,RAND_PERT_UPDATE
     USE module_pbl3d, ONLY : Init_temp_arrays_for_substep, Update_wrf_tends_temp_state_and_zero_tends, Allocate_temp_tends, Deallocate_temp_tends, &
-                             Calc_turb_fluxes, Vertical_turb_mix, Horizontal_turb_mix
+                             Calc_turb_fluxes_driver, Vertical_turb_mix, Horizontal_turb_mix
 
 
     IMPLICIT NONE
@@ -1151,8 +1151,8 @@ BENCH_END(hor_diff_tim)
            !$OMP PARALLEL DO   &
            !$OMP PRIVATE ( ij )
            DO ij = 1 , grid%num_tiles
-             CALL wrf_debug (200 , ' call Calc_turb_fluxes')
-             CALL Calc_turb_fluxes (config_flags = config_flags, &
+             CALL wrf_debug (200 , ' call Calc_turb_fluxes_driver')
+             CALL Calc_turb_fluxes_driver (config_flags = config_flags, &
              dz = dz8w, z_at_mass = grid%z, & ! ok
              u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, th = th_phy, th2 = grid%th_tmp, & ! ok
              qv = grid%qv_tmp, thetav = grid%thetav, tsk = grid%tsk, t2=grid%t2, q2 = grid%q2, psfc = grid%psfc, & ! ok
