@@ -1163,17 +1163,12 @@ BENCH_END(hor_diff_tim)
              dw_dx_faces = grid%dw_dx_faces, dw_dy_faces = grid%dw_dy_faces, dw_dz_faces = grid%dw_dz_faces, &
              dqv_dx_faces = grid%dqv_dx_faces, dqv_dy_faces = grid%dqv_dy_faces, dqv_dz_faces = grid%dqv_dz_faces, &
              dthetav_dx_faces = grid%dthetav_dx_faces, dthetav_dy_faces = grid%dthetav_dy_faces, dthetav_dz_faces = grid%dthetav_dz_faces, &
-             du_dx_mass = grid%du_dx_mass, du_dy_mass = grid%du_dy_mass, du_dz_mass = grid%du_dz_mass, &
-             dv_dx_mass = grid%dv_dx_mass, dv_dy_mass = grid%dv_dy_mass, dv_dz_mass = grid%dv_dz_mass, &
-             dw_dx_mass = grid%dw_dx_mass, dw_dy_mass = grid%dw_dy_mass, dw_dz_mass = grid%dw_dz_mass, &
-             dthetav_dx_mass = grid%dthetav_dx_mass, dthetav_dy_mass = grid%dthetav_dy_mass, dthetav_dz_mass = grid%dthetav_dz_mass, &
-             dqv_dx_mass = grid%dqv_dx_mass, dqv_dy_mass = grid%dqv_dy_mass, dqv_dz_mass = grid%dqv_dz_mass, &
              itimestep = grid%itimestep, ss = ss, n_tracer = num_tracer, &
-             q_sq = grid%q_sq, q_sq_pa = grid%q_sq_pa, q_sq_rat = grid%q_sq_rat, q_sq_prog = grid%q_sq_tmp, q_sq_tend = q_sq_tend_tmp, &
+             q_sq = grid%q_sq, q_sq_prog = grid%q_sq_tmp, q_sq_tend = q_sq_tend_tmp, &
              q_sq_vdiff_tend = grid%q_sq_vdiff, q_sq_hdiff_tend = grid%q_sq_hdiff, q_sq_shear_tend = grid%q_sq_shear, &
              q_sq_buoyancy_tend = grid%q_sq_buoyancy, q_sq_dissip_tend = grid%q_sq_dissip, &
              khx = grid%tf_khx, khy = grid%tf_khy, khz = grid%tf_khz, &
-             l_master = grid%l_master, l_master_pa = grid%l_master_pa, l_master_rat = grid%l_master_rat, l_master_at_mass = grid%l_master_at_mass, & ! ok
+             l_master = grid%l_master, l_master_at_mass = grid%l_master_at_mass, & ! ok
              msfux = grid%msfux, msfuy = grid%msfuy, msfvx = grid%msfvx, &
              msfvy = grid%msfvy, msftx = grid%msftx, msfty = grid%msfty, &
              dx = grid%dx, dy = grid%dy, &
@@ -1193,35 +1188,9 @@ BENCH_END(hor_diff_tim)
              turb_flux_utheta = grid%turb_flux_utheta, &
              turb_flux_vtheta = grid%turb_flux_vtheta, &
              turb_flux_wtheta = grid%turb_flux_wtheta, &
-             turb_flux_u2_pa = grid%turb_flux_u2_pa, turb_flux_v2_pa = grid%turb_flux_v2_pa,& ! OK
-             turb_flux_w2_pa = grid%turb_flux_w2_pa, turb_flux_uv_pa = grid%turb_flux_uv_pa,& ! OK
-             turb_flux_uw_pa = grid%turb_flux_uw_pa, turb_flux_vw_pa = grid%turb_flux_vw_pa,& ! OK
-             turb_flux_utheta_v_pa = grid%turb_flux_utheta_v_pa, & ! OK
-             turb_flux_vtheta_v_pa = grid%turb_flux_vtheta_v_pa, & ! OK
-             turb_flux_wtheta_v_pa = grid%turb_flux_wtheta_v_pa, & ! OK
-             turb_flux_theta2_v_pa = grid%turb_flux_theta2_v_pa, & ! OK
-             turb_flux_uqv_pa = grid%turb_flux_uqv_pa, turb_flux_vqv_pa = grid%turb_flux_vqv_pa, &
-             turb_flux_wqv_pa = grid%turb_flux_wqv_pa, &
-             turb_flux_utheta_pa = grid%turb_flux_utheta_pa, &
-             turb_flux_vtheta_pa = grid%turb_flux_vtheta_pa, &
-             turb_flux_wtheta_pa = grid%turb_flux_wtheta_pa, &
-             turb_flux_u2_rat = grid%turb_flux_u2_rat, turb_flux_v2_rat = grid%turb_flux_v2_rat,& ! OK
-             turb_flux_w2_rat = grid%turb_flux_w2_rat, turb_flux_uv_rat = grid%turb_flux_uv_rat,& ! OK
-             turb_flux_uw_rat = grid%turb_flux_uw_rat, turb_flux_vw_rat = grid%turb_flux_vw_rat,& ! OK
-             turb_flux_utheta_v_rat = grid%turb_flux_utheta_v_rat, & ! OK
-             turb_flux_vtheta_v_rat = grid%turb_flux_vtheta_v_rat, & ! OK
-             turb_flux_wtheta_v_rat = grid%turb_flux_wtheta_v_rat, & ! OK
-             turb_flux_theta2_v_rat = grid%turb_flux_theta2_v_rat, & ! OK
-             turb_flux_uqv_rat = grid%turb_flux_uqv_rat, turb_flux_vqv_rat = grid%turb_flux_vqv_rat, &
-             turb_flux_wqv_rat = grid%turb_flux_wqv_rat, &
-             turb_flux_utheta_rat = grid%turb_flux_utheta_rat, &
-             turb_flux_vtheta_rat = grid%turb_flux_vtheta_rat, &
-             turb_flux_wtheta_rat = grid%turb_flux_wtheta_rat, &
-             mat_cond_heat = grid%mat_cond_heat, mat_cond_moist = grid%mat_cond_moist, &
              turb_flux_u2_mass = grid%turb_flux_u2_mass, turb_flux_v2_mass = grid%turb_flux_v2_mass,& ! OK
              turb_flux_w2_mass = grid%turb_flux_w2_mass, turb_flux_uv_mass = grid%turb_flux_uv_mass,& ! OK
              turb_flux_uw_mass = grid%turb_flux_uw_mass, turb_flux_vw_mass = grid%turb_flux_vw_mass,& ! OK
-             turb_flux_wtheta_mass = grid%turb_flux_wtheta_mass, &
              turb_flux_wtheta_v_mass = grid%turb_flux_wtheta_v_mass, &
              ids = ids, ide = ide, jds = jds, jde = jde, kds = kds, kde = kde, & ! ok
              ims = ims, ime = ime, jms = jms, jme = jme, kms = kms, kme = kme, & ! ok
