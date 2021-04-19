@@ -39,10 +39,10 @@
     use, intrinsic :: iso_fortran_env
 
     use module_model_constants, only: KARMAN, G, P608, T0, CP, RCP
-    use module_state_description, only: param_first_scalar
+    use module_state_description, only: p_qc, p_qr, p_qi, p_qs, p_qg, p_qnc, p_qnr, p_qni, p_qnwfa, p_qnifa, param_first_scalar
     use module_big_step_utilities_em, only: grid_config_rec_type
     use module_pbl3d_my, ONLY : Set_init_turb_state_my, Calc_turb_fluxes_my
-    use module_pbl3d_my, ONLY : Q_SQ_MIN, TURB_FLUX_MIN, a1, a2, b1, b2, c1, c2, c3, alpha, lambda
+    use module_pbl3d_my, ONLY : Q_SQ_MIN, TURB_FLUX_MIN, a_2, b_1
 
     implicit none
 
@@ -50,7 +50,7 @@
 
     public :: Init_pbl3d, &
               Init_temp_arrays_for_substep, Update_wrf_tends_temp_state_and_zero_tends, Allocate_temp_tends, Deallocate_temp_tends, &
-              Calc_turb_fluxes_driver, Vertical_turb_mix, Horizontal_turb_mix
+              Fill_l_mass_with_l_face, Calc_turb_fluxes_driver, Vertical_turb_mix, Horizontal_turb_mix
 
     real, parameter :: G_OVER_TREF = G / T0
     logical, parameter :: USE_HIGH_ORDER = .true.
@@ -549,26 +549,30 @@
     end subroutine Update_temp_state
 
 
-    subroutine Calc_turb_fluxes_driver (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
-              du_dx_faces, du_dy_faces, du_dz_faces, &
-              dv_dx_faces, dv_dy_faces, dv_dz_faces, &
-              dw_dx_faces, dw_dy_faces, dw_dz_faces, &
-              dqv_dx_faces, dqv_dy_faces, dqv_dz_faces, &
-              dthetav_dx_faces, dthetav_dy_faces, dthetav_dz_faces, &
-              itimestep, ss, n_tracer, &
-              q_sq, q_sq_prog, q_sq_tend, &
+    subroutine Calc_turb_fluxes_driver (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, qc, qr, qi, qs, qg, &
+              qnc, qnr, qni, qnwfa, qnifa, &
+              thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, du_dx_faces, du_dy_faces, du_dz_faces, &
+              dv_dx_faces, dv_dy_faces, dv_dz_faces, dw_dx_faces, dw_dy_faces, dw_dz_faces, &
+              dqv_dx_faces, dqv_dy_faces, dqv_dz_faces, dthetav_dx_faces, dthetav_dy_faces, dthetav_dz_faces, &
+              dqc_dx_faces, dqc_dy_faces, dqc_dz_faces, dqr_dx_faces, dqr_dy_faces, dqr_dz_faces, dqi_dx_faces, dqi_dy_faces, &
+              dqi_dz_faces, dqs_dx_faces, dqs_dy_faces, dqs_dz_faces, dqg_dx_faces, dqg_dy_faces, dqg_dz_faces, &
+              dqnc_dx_faces, dqnc_dy_faces, dqnc_dz_faces, dqnr_dx_faces, dqnr_dy_faces, dqnr_dz_faces, &
+              dqni_dx_faces, dqni_dy_faces, dqni_dz_faces, dqnwfa_dx_faces, dqnwfa_dy_faces, dqnwfa_dz_faces, &
+              dqnifa_dx_faces, dqnifa_dy_faces, dqnifa_dz_faces, &
+              itimestep, ss, n_tracer, q_sq, q_sq_prog, q_sq_tend, &
               q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, q_sq_dissip_tend, &
               khx, khy, khz, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2,   &
               turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
-              turb_flux_theta2_v, &
-              turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, &
-              turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, &
-              turb_flux_u2_mass, turb_flux_v2_mass, turb_flux_w2_mass, turb_flux_uv_mass, turb_flux_uw_mass, turb_flux_vw_mass, &
-              turb_flux_wtheta_v_mass, msfux, msfuy, msfvx, msfvy, msftx, msfty, &
-              dx, dy, rdx, rdy, dn, dnw, rdz, dt, id, &
-              rdzw, fnm, fnp, cf1, cf2, cf3, zx, zy, mut, c1h, c2h, &
-              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its,    &
-              ite, jts, jte, kts, kte)
+              turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, &
+              turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
+              turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, &
+              turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, &
+              turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, &
+              turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
+              turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_u2_mass, turb_flux_v2_mass, &
+              turb_flux_w2_mass, turb_flux_uv_mass, turb_flux_uw_mass, turb_flux_vw_mass, turb_flux_wtheta_v_mass, &
+              msfux, msfuy, msfvx, msfvy, msftx, msfty, dx, dy, rdx, rdy, dn, dnw, rdz, dt, id, rdzw, fnm, fnp, cf1, cf2, cf3, &
+              zx, zy, mut, c1h, c2h, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                       !
@@ -587,6 +591,7 @@
 
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: dz, z_at_mass, u, v, &
           w, th, th2, qv, rho, zx, zy, rdz, rdzw
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: qc, qr, qi, qs, qg, qnc, qnr, qni, qnwfa, qnifa
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq, q_sq_prog
       real, dimension (its:ite, kts:kte, jts:jte), intent (inout) :: q_sq_tend
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: q_sq_vdiff_tend
@@ -598,19 +603,26 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: thetav
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dx_faces, du_dy_faces, du_dz_faces, &
           dv_dx_faces, dv_dy_faces, dv_dz_faces, dw_dx_faces, dw_dy_faces, dw_dz_faces, dthetav_dx_faces,   &
-          dthetav_dy_faces, dthetav_dz_faces, dqv_dx_faces, dqv_dy_faces, dqv_dz_faces
+          dthetav_dy_faces, dthetav_dz_faces, dqv_dx_faces, dqv_dy_faces, dqv_dz_faces, dqc_dx_faces, &
+          dqc_dy_faces, dqc_dz_faces, dqr_dx_faces, dqr_dy_faces, dqr_dz_faces, dqi_dx_faces, dqi_dy_faces, &
+          dqi_dz_faces, dqs_dx_faces, dqs_dy_faces, dqs_dz_faces, dqg_dx_faces, dqg_dy_faces, dqg_dz_faces, &
+          dqnc_dx_faces, dqnc_dy_faces, dqnc_dz_faces, dqnr_dx_faces, dqnr_dy_faces, dqnr_dz_faces, &
+          dqni_dx_faces, dqni_dy_faces, dqni_dz_faces, dqnwfa_dx_faces, dqnwfa_dy_faces, dqnwfa_dz_faces, &
+          dqnifa_dx_faces, dqnifa_dy_faces, dqnifa_dz_faces
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_master_at_mass
       real, dimension (ims:ime, jms:jme),          intent (in)    :: msfux, msfuy, msfvx, msfvy, msftx, msfty
       real, dimension (ims:ime, jms:jme),          intent (in)    :: tsk, t2, q2, psfc, ust, hfx, qfx, rmol
       real, dimension (ims:ime, jms:jme),          intent (in)    :: mut
       real, dimension (kms:kme),                   intent (in)    :: c1h, c2h
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: turb_flux_u2, turb_flux_v2, turb_flux_w2, &
-                                                                     turb_flux_uv, turb_flux_uw, turb_flux_vw, &
-                                                                     turb_flux_utheta_v, turb_flux_vtheta_v,   &
-                                                                     turb_flux_wtheta_v, turb_flux_theta2_v,   &
-                                                                     turb_flux_uqv, turb_flux_vqv,             &
-                                                                     turb_flux_wqv, turb_flux_utheta,          &
-                                                                     turb_flux_vtheta, turb_flux_wtheta
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: turb_flux_u2, turb_flux_v2, turb_flux_w2,  &
+          turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
+          turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta,  &
+          turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr,          &
+          turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs,             &
+          turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc,           &
+          turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni,       &
+          turb_flux_wqni, turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa,               &
+          turb_flux_vqnifa, turb_flux_wqnifa
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: turb_flux_u2_mass, turb_flux_v2_mass, turb_flux_w2_mass, &
                                                                      turb_flux_uv_mass, turb_flux_uw_mass, turb_flux_vw_mass, &
                                                                      turb_flux_wtheta_v_mass
@@ -621,11 +633,11 @@
                                                                      its, ite, jts, jte, kts, kte
 
         ! Local vars
-      real, dimension (its:ite, kts:kte, jts:jte) :: du_dx, du_dy, du_dz, &
-                                                     dv_dx, dv_dy, dv_dz, &
-                                                     dw_dx, dw_dy, dw_dz, &
-                                                     dthetav_dx, dthetav_dy, dthetav_dz, &
-                                                     dqv_dx, dqv_dy, dqv_dz
+      real, dimension (its:ite, kts:kte, jts:jte) :: du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, &
+          dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy, dqv_dz,     &
+          dqc_dx, dqc_dy, dqc_dz, dqr_dx, dqr_dy, dqr_dz, dqi_dx, dqi_dy, dqi_dz, dqs_dx, dqs_dy, dqs_dz, &
+          dqg_dx, dqg_dy, dqg_dz, dqnc_dx, dqnc_dy, dqnc_dz, dqnr_dx, dqnr_dy, dqnr_dz, &
+          dqni_dx, dqni_dy, dqni_dz, dqnwfa_dx, dqnwfa_dy, dqnwfa_dz, dqnifa_dx, dqnifa_dy, dqnifa_dz
       logical, parameter :: DEBUG = .false.
       integer :: i, j, k, i_start, i_end, j_start, j_end, ktf
 
@@ -647,6 +659,14 @@
           dqv_dx, dqv_dy, dqv_dz,                                      &
           ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme,  &
           its, ite, jts, jte, kts, kte)
+
+      if ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) then
+        call Calc_scalar_var_derivatives (qc, qr, qi, qs, qg, qnc, qnr, qni, qnwfa, qnifa, msftx, msfty, msfux, msfuy, msfvx, msfvy, &
+            rdx, rdy, fnm, fnp, cf1, cf2, cf3, zx, zy, rdz, rdzw, dnw, dn, dqc_dx, dqc_dy, dqc_dz, dqr_dx, dqr_dy, dqr_dz, &
+            dqi_dx, dqi_dy, dqi_dz, dqs_dx, dqs_dy, dqs_dz, dqg_dx, dqg_dy, dqg_dz, dqnc_dx, dqnc_dy, dqnc_dz, &
+            dqnr_dx, dqnr_dy, dqnr_dz, dqni_dx, dqni_dy, dqni_dz, dqnwfa_dx, dqnwfa_dy, dqnwfa_dz, dqnifa_dx, dqnifa_dy, dqnifa_dz, &
+            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      end if
 
         ! Calculate indexes
       i_start = its
@@ -681,15 +701,84 @@
            dthetav_dx_faces(i, k, j) = dthetav_dx(i, k, j)
            dthetav_dy_faces(i, k, j) = dthetav_dy(i, k, j)
            dthetav_dz_faces(i, k, j) = dthetav_dz(i, k, j)
+           if ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) then
+             dqc_dx_faces(i, k, j) = dqc_dx(i, k, j)
+             dqc_dy_faces(i, k, j) = dqc_dy(i, k, j)
+             dqc_dz_faces(i, k, j) = dqc_dz(i, k, j)
+             dqr_dx_faces(i, k, j) = dqr_dx(i, k, j)
+             dqr_dy_faces(i, k, j) = dqr_dy(i, k, j)
+             dqr_dz_faces(i, k, j) = dqr_dz(i, k, j)
+             dqi_dx_faces(i, k, j) = dqi_dx(i, k, j)
+             dqi_dy_faces(i, k, j) = dqi_dy(i, k, j)
+             dqi_dz_faces(i, k, j) = dqi_dz(i, k, j)
+             dqs_dx_faces(i, k, j) = dqs_dx(i, k, j)
+             dqs_dy_faces(i, k, j) = dqs_dy(i, k, j)
+             dqs_dz_faces(i, k, j) = dqs_dz(i, k, j)
+             dqg_dx_faces(i, k, j) = dqg_dx(i, k, j)
+             dqg_dy_faces(i, k, j) = dqg_dy(i, k, j)
+             dqg_dz_faces(i, k, j) = dqg_dz(i, k, j)
+             dqnc_dx_faces(i, k, j) = dqnc_dx(i, k, j)
+             dqnc_dy_faces(i, k, j) = dqnc_dy(i, k, j)
+             dqnc_dz_faces(i, k, j) = dqnc_dz(i, k, j)
+             dqnr_dx_faces(i, k, j) = dqnr_dx(i, k, j)
+             dqnr_dy_faces(i, k, j) = dqnr_dy(i, k, j)
+             dqnr_dz_faces(i, k, j) = dqnr_dz(i, k, j)
+             dqni_dx_faces(i, k, j) = dqni_dx(i, k, j)
+             dqni_dy_faces(i, k, j) = dqni_dy(i, k, j)
+             dqni_dz_faces(i, k, j) = dqni_dz(i, k, j)
+             dqnwfa_dx_faces(i, k, j) = dqnwfa_dx(i, k, j)
+             dqnwfa_dy_faces(i, k, j) = dqnwfa_dy(i, k, j)
+             dqnwfa_dz_faces(i, k, j) = dqnwfa_dz(i, k, j)
+             dqnifa_dx_faces(i, k, j) = dqnifa_dx(i, k, j)
+             dqnifa_dy_faces(i, k, j) = dqnifa_dy(i, k, j)
+             dqnifa_dz_faces(i, k, j) = dqnifa_dz(i, k, j)
+           else
+             dqc_dx_faces(i, k, j) = 0.0
+             dqc_dy_faces(i, k, j) = 0.0
+             dqc_dz_faces(i, k, j) = 0.0
+             dqr_dx_faces(i, k, j) = 0.0
+             dqr_dy_faces(i, k, j) = 0.0
+             dqr_dz_faces(i, k, j) = 0.0
+             dqi_dx_faces(i, k, j) = 0.0
+             dqi_dy_faces(i, k, j) = 0.0
+             dqi_dz_faces(i, k, j) = 0.0
+             dqs_dx_faces(i, k, j) = 0.0
+             dqs_dy_faces(i, k, j) = 0.0
+             dqs_dz_faces(i, k, j) = 0.0
+             dqg_dx_faces(i, k, j) = 0.0
+             dqg_dy_faces(i, k, j) = 0.0
+             dqg_dz_faces(i, k, j) = 0.0
+             dqnc_dx_faces(i, k, j) = 0.0
+             dqnc_dy_faces(i, k, j) = 0.0
+             dqnc_dz_faces(i, k, j) = 0.0
+             dqnr_dx_faces(i, k, j) = 0.0
+             dqnr_dy_faces(i, k, j) = 0.0
+             dqnr_dz_faces(i, k, j) = 0.0
+             dqni_dx_faces(i, k, j) = 0.0
+             dqni_dy_faces(i, k, j) = 0.0
+             dqni_dz_faces(i, k, j) = 0.0
+             dqnwfa_dx_faces(i, k, j) = 0.0
+             dqnwfa_dy_faces(i, k, j) = 0.0
+             dqnwfa_dz_faces(i, k, j) = 0.0
+             dqnifa_dx_faces(i, k, j) = 0.0
+             dqnifa_dy_faces(i, k, j) = 0.0
+             dqnifa_dz_faces(i, k, j) = 0.0
+           end if
           end do
         end do
       end do
 
       call Calc_turb_fluxes_my (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
           du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dqv_dx, dqv_dy, dqv_dz, dthetav_dx, dthetav_dy, dthetav_dz, &
-          itimestep, ss, n_tracer, q_sq, q_sq_prog, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
+          dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, itimestep, ss, n_tracer, q_sq, q_sq_prog, &
+          l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv, &
-          turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, msfux, msfuy, msfvx, msfvy, msftx, msfty, &
+          turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, &
+          turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
+          turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc, &
+          turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, &
+          turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
+          msfux, msfuy, msfvx, msfvy, msftx, msfty, &
           dx, dy, rdx, rdy, dn, dnw, rdz, dt, id, rdzw, fnm, fnp, cf1, cf2, cf3, zx, zy, mut, c1h, c2h, ids, ide, jds, jde, kds, kde, &
           ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
@@ -1694,6 +1783,193 @@
     end subroutine Calc_mass_var_derivatives
 
 
+    subroutine Calc_scalar_var_derivatives (qc, qr, qi, qs, qg, qnc, qnr, qni, qnwfa, qnifa, msftx, msfty, msfux, msfuy, msfvx, msfvy, &
+              rdx, rdy, fnm, fnp, cf1, cf2, cf3, zx, zy, rdz, rdzw, dnw, dn, dqc_dx, dqc_dy, dqc_dz, dqr_dx, dqr_dy, dqr_dz, &
+              dqi_dx, dqi_dy, dqi_dz, dqs_dx, dqs_dy, dqs_dz, dqg_dx, dqg_dy, dqg_dz, dqnc_dx, dqnc_dy, dqnc_dz, &
+              dqnr_dx, dqnr_dy, dqnr_dz, dqni_dx, dqni_dy, dqni_dz, dqnwfa_dx, dqnwfa_dy, dqnwfa_dz, dqnifa_dx, dqnifa_dy, dqnifa_dz, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                                                     !
+      ! Purpose: Calculate spatial derivatives of hydrometeor & scalar variables at the center of the faces !
+      !                                                                                                     !
+      ! Authors: Timothy W. Juliano & Pedro A. Jimenez                                                      !
+      !                                                                                                     !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      real, dimension (kms:kme),                   intent (in)  :: fnm, fnp, dn, dnw
+      real, dimension (ims:ime, jms:jme),          intent (in)  :: msfux, msfuy, msfvx, msfvy, msftx, msfty
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: zx, zy
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: qc, qr, qi, qs, qg, qnc, qnr, qni, qnwfa, qnifa
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: rdz, rdzw
+      real,                                        intent (in)  :: rdx, rdy, cf1, cf2, cf3
+      integer,                                     intent (in)  :: ids, ide, jds, jde, kds, kde, &
+                                                                   ims, ime, jms, jme, kms, kme, &
+                                                                   its, ite, jts, jte, kts, kte
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out) :: dqc_dx, dqc_dy, dqc_dz, &
+         dqr_dx, dqr_dy, dqr_dz, dqi_dx, dqi_dy, dqi_dz, dqs_dx, dqs_dy, dqs_dz, dqg_dx, dqg_dy, dqg_dz, &
+         dqnc_dx, dqnc_dy, dqnc_dz, dqnr_dx, dqnr_dy, dqnr_dz, dqni_dx, dqni_dy, dqni_dz, &
+         dqnwfa_dx, dqnwfa_dy, dqnwfa_dz, dqnifa_dx, dqnifa_dy, dqnifa_dz
+
+      logical, parameter :: DEBUG = .false.
+
+        ! Calculate cloud mass derivatives
+      if ( p_qc .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qc, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqc_dx)
+
+        call Calc_dmassvar_dy (qc, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqc_dy)
+
+        call Calc_dmassvar_dz (qc, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqc_dz)
+      else
+        dqc_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqc_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqc_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate rain mass derivatives
+      if ( p_qr .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qr, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqr_dx)
+
+        call Calc_dmassvar_dy (qr, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqr_dy)
+
+        call Calc_dmassvar_dz (qr, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqr_dz)
+      else
+        dqr_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqr_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqr_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate ice mass derivatives
+      if ( p_qi .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qi, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqi_dx)
+
+        call Calc_dmassvar_dy (qi, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqi_dy)
+
+        call Calc_dmassvar_dz (qi, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqi_dz)
+      else
+        dqi_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqi_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqi_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate snow mass derivatives
+      if ( p_qs .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qs, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqs_dx)
+
+        call Calc_dmassvar_dy (qs, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqs_dy)
+
+        call Calc_dmassvar_dz (qs, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqs_dz)
+      else
+        dqs_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqs_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqs_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate graupel mass derivatives
+      if ( p_qg .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qg, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqg_dx)
+
+        call Calc_dmassvar_dy (qg, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqg_dy)
+
+        call Calc_dmassvar_dz (qg, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqg_dz)
+      else
+        dqg_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqg_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqg_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate cloud number derivatives
+      if ( p_qnc .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qnc, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnc_dx)
+
+        call Calc_dmassvar_dy (qnc, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnc_dy)
+
+        call Calc_dmassvar_dz (qnc, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnc_dz)
+      else
+        dqnc_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqnc_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqnc_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate rain number derivatives
+      if ( p_qnr .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qnr, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnr_dx)
+
+        call Calc_dmassvar_dy (qnr, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnr_dy)
+
+        call Calc_dmassvar_dz (qnr, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnr_dz)
+      else
+        dqnr_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqnr_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqnr_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate ice number derivatives
+      if ( p_qni .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qni, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqni_dx)
+
+        call Calc_dmassvar_dy (qni, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqni_dy)
+
+        call Calc_dmassvar_dz (qni, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqni_dz)
+      else
+        dqni_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqni_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqni_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate water friendly aerosol number derivatives
+      if ( p_qnwfa .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qnwfa, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnwfa_dx)
+
+        call Calc_dmassvar_dy (qnwfa, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnwfa_dy)
+
+        call Calc_dmassvar_dz (qnwfa, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnwfa_dz)
+      else
+        dqnwfa_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqnwfa_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqnwfa_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+        ! Calculate ice friendly aerosol number derivatives
+      if ( p_qnifa .ge. param_first_scalar ) then
+        call Calc_dmassvar_dx (qnifa, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnifa_dx)
+
+        call Calc_dmassvar_dy (qnifa, zy, rdz, msfty, fnm, fnp, dn, dnw, rdy, cf1, cf2, cf3,  &
+            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnifa_dy)
+
+        call Calc_dmassvar_dz (qnifa, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqnifa_dz)
+      else
+        dqnifa_dx(its:ite, kts:kte, jts:jte) = 0.0
+        dqnifa_dy(its:ite, kts:kte, jts:jte) = 0.0
+        dqnifa_dz(its:ite, kts:kte, jts:jte) = 0.0
+      end if
+
+      if (DEBUG) print *, 'Done Calc_scalar_var_derivatives...'
+
+    end subroutine Calc_scalar_var_derivatives
+
+
     subroutine Calc_dmassvar_dx (var, zx, rdz, msftx, fnm, fnp, dn, dnw, rdx, cf1, cf2, cf3,  &
               ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dvar_dx)
 
@@ -1986,14 +2262,14 @@
             if (dthetav_dz(i, k, j) == 0.0 .or. du_dz(i, k, j) == 0.0 .or. q_sq(i, k, j) == Q_SQ_MIN) then
               khx(i, k, j) = 0.0
             else
-              khx(i, k, j) = Max( ( (turb_flux_utheta_v(i, k, j) / (3.0 * a2 * l_master(i, k, j) / sqrt(q_sq(i, k, j)))) &
+              khx(i, k, j) = Max( ( (turb_flux_utheta_v(i, k, j) / (3.0 * a_2 * l_master(i, k, j) / sqrt(q_sq(i, k, j)))) &
                             + (turb_flux_uw(i, k, j) * dthetav_dz(i, k, j)) ) / (dthetav_dz(i, k, j) * du_dz(i, k, j)), 0.0 )
             end if
               ! Khy
             if (dthetav_dz(i, k, j) == 0.0 .or. dv_dz(i, k, j) == 0.0 .or. q_sq(i, k, j) == Q_SQ_MIN) then
               khy(i, k, j) = 0.0
             else
-              khy(i, k, j) = Max( ( (turb_flux_vtheta_v(i, k, j) / (3.0 * a2 * l_master(i, k, j) / sqrt(q_sq(i, k, j)))) &
+              khy(i, k, j) = Max( ( (turb_flux_vtheta_v(i, k, j) / (3.0 * a_2 * l_master(i, k, j) / sqrt(q_sq(i, k, j)))) &
                             + (turb_flux_vw(i, k, j) * dthetav_dz(i, k, j)) ) / (dthetav_dz(i, k, j) * dv_dz(i, k, j)), 0.0 )
             end if
               ! Khz
@@ -2017,11 +2293,11 @@
     end subroutine Calc_kh
 
 
-    subroutine Vertical_turb_mix (dth, du, dv, dw, dqv, khz, tracer, tracer_tend,   &
-              pbl3d_opt, ss, config_flags, turb_flux_wtheta, turb_flux_uw, turb_flux_vw, &
-              turb_flux_w2, turb_flux_wqv, rdz, dnw, dn, rho, fnm, fnp, n_tracer,    &
-              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme,            &
-              its, ite, jts, jte, kts, kte)
+    subroutine Vertical_turb_mix (dth, du, dv, dw, dqv, dqc, dqr, dqi, dqs, dqg, dqnc, dqnr, dqni, dqnwfa, dqnifa, &
+              khz, tracer, tracer_tend, pbl3d_opt, ss, config_flags, turb_flux_wtheta, turb_flux_uw, turb_flux_vw, &
+              turb_flux_w2, turb_flux_wqv, turb_flux_wqc, turb_flux_wqr, turb_flux_wqi, turb_flux_wqs, turb_flux_wqg, &
+              turb_flux_wqnc, turb_flux_wqnr, turb_flux_wqni, turb_flux_wqnwfa, turb_flux_wqnifa, rdz, dnw, dn, rho, &
+              fnm, fnp, n_tracer, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                               !
@@ -2042,10 +2318,13 @@
 
       real, dimension (kms:kme),                   intent(in) :: dnw, dn, fnm, fnp
       real, dimension (ims:ime, kms:kme, jms:jme), intent(in) :: rdz, khz, rho, &
-          turb_flux_wtheta, turb_flux_uw, turb_flux_vw, turb_flux_w2,  &
-          turb_flux_wqv
+          turb_flux_wtheta, turb_flux_uw, turb_flux_vw, turb_flux_w2, turb_flux_wqv, &
+          turb_flux_wqc, turb_flux_wqr, turb_flux_wqi, turb_flux_wqs, turb_flux_wqg, &
+          turb_flux_wqnc, turb_flux_wqnr, turb_flux_wqni, turb_flux_wqnwfa, turb_flux_wqnifa
       real, dimension (its:ite, kts:kte, jts:jte), intent(out) :: dth, &
           du, dv, dw, dqv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent(inout) :: dqc, dqr, dqi, dqs, dqg, &
+          dqnc, dqnr, dqni, dqnwfa, dqnifa
       real, dimension (ims:ime, kms:kme, jms:jme, n_tracer), intent(in) ::  tracer
       real, dimension (ims:ime, kms:kme, jms:jme, n_tracer), intent(inout) ::  tracer_tend
       
@@ -2053,6 +2332,7 @@
       integer :: im
       logical, parameter :: ADD_TEND_WIND=.true., ADD_TEND_T=.true., &
           ADD_TEND_Q=.true.
+      REAL, DIMENSION (its:ite, kts:kte, jts:jte) :: hydromet_tend
       
       if (ADD_TEND_WIND) then
         call Vertical_mixing_u (du, config_flags, turb_flux_uw, &
@@ -2081,6 +2361,99 @@
         call Vertical_mixing_s_with_flux (dqv, config_flags, turb_flux_wqv,  &
             dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
             jme, kms, kme, its, ite, jts, jte, kts, kte)
+      end if
+
+      if ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) then
+          ! Cloud mass
+        if ( p_qc .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqc,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqc(its:ite, kts:kte, jts:jte) = dqc(its:ite, kts:kte, jts:jte) + &
+                                           hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Rain mass
+        if ( p_qr .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqr,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqr(its:ite, kts:kte, jts:jte) = dqr(its:ite, kts:kte, jts:jte) + &
+                                           hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice mass
+        if ( p_qi .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqi,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqi(its:ite, kts:kte, jts:jte) = dqi(its:ite, kts:kte, jts:jte) + &
+                                           hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Snow mass
+        if ( p_qs .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqs,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqs(its:ite, kts:kte, jts:jte) = dqs(its:ite, kts:kte, jts:jte) + &
+                                           hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+           ! Graupel mass
+        if ( p_qg .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqg,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqg(its:ite, kts:kte, jts:jte) = dqg(its:ite, kts:kte, jts:jte) + &
+                                           hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Cloud number
+        if ( p_qnc .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqnc,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqnc(its:ite, kts:kte, jts:jte) = dqnc(its:ite, kts:kte, jts:jte) + &
+                                            hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Rain number
+        if ( p_qnr .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqnr,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqnr(its:ite, kts:kte, jts:jte) = dqnr(its:ite, kts:kte, jts:jte) + &
+                                            hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice number
+        if ( p_qni .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqni,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqni(its:ite, kts:kte, jts:jte) = dqni(its:ite, kts:kte, jts:jte) + &
+                                            hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Water friendly aerosol number
+        if ( p_qnwfa .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqnwfa,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqnwfa(its:ite, kts:kte, jts:jte) = dqnwfa(its:ite, kts:kte, jts:jte) + &
+                                              hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice friendly aerosol number
+        if ( p_qnifa .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          call Vertical_mixing_s_with_flux (hydromet_tend, config_flags, turb_flux_wqnifa,  &
+              dnw, rho, fnm, fnp, ids, ide, jds, jde, kds, kde, ims, ime, jms, &
+              jme, kms, kme, its, ite, jts, jte, kts, kte)
+          dqnifa(its:ite, kts:kte, jts:jte) = dqnifa(its:ite, kts:kte, jts:jte) + &
+                                              hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
       end if
 
       if (ss .eq. config_flags%pbl3d_nsteps .and. n_tracer .ge. param_first_scalar) then
@@ -2491,9 +2864,15 @@
 
     end subroutine Vertical_mixing_s_with_flux
 
-    subroutine Horizontal_turb_mix (rt_tendf, ru_tendf, rv_tendf, rw_tendf, moist_tendf, tracer_tend, &
-              ss, config_flags, turb_flux_u2, turb_flux_v2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_w2, &
-              turb_flux_utheta, turb_flux_vtheta, turb_flux_uqv, turb_flux_vqv, khx, khy, n_tracer, tracer, &
+
+    subroutine Horizontal_turb_mix (rt_tendf, ru_tendf, rv_tendf, rw_tendf, moist_tendf, qc_tendf, qr_tendf, &
+              qi_tendf, qs_tendf, qg_tendf, qnc_tendf, qnr_tendf, qni_tendf, qnwfa_tendf, qnifa_tendf, tracer_tend, &
+              ss, config_flags, turb_flux_u2, turb_flux_v2, turb_flux_uv, &
+              turb_flux_uw, turb_flux_vw, turb_flux_w2, turb_flux_utheta, turb_flux_vtheta, turb_flux_uqv, &
+              turb_flux_vqv, turb_flux_uqc, turb_flux_vqc, turb_flux_uqr, turb_flux_vqr, turb_flux_uqi, turb_flux_vqi, &
+              turb_flux_uqs, turb_flux_vqs, turb_flux_uqg, turb_flux_vqg, turb_flux_uqnc, turb_flux_vqnc, &
+              turb_flux_uqnr, turb_flux_vqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_uqnwfa, turb_flux_vqnwfa, &
+              turb_flux_uqnifa, turb_flux_vqnifa, khx, khy, n_tracer, tracer, &
               msfux, msfuy, msfvx, msfvy, msftx, msfty, dx, dy, rdx, rdy, rdz, rdzw, fnm, fnp, cf1, cf2, cf3, &
               zx, zy, dn, dnw, rho, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
@@ -2533,6 +2912,8 @@
                                                                      rv_tendf, &
                                                                      rw_tendf, &
                                                                      moist_tendf
+      REAL , DIMENSION ( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: qc_tendf, &
+           qr_tendf, qi_tendf, qs_tendf, qg_tendf, qnc_tendf, qnr_tendf, qni_tendf, qnwfa_tendf, qnifa_tendf
 
       REAL , DIMENSION( ims:ime, kms:kme, jms:jme, n_tracer), INTENT(INOUT) :: tracer_tend
       REAL , DIMENSION( ims:ime, kms:kme, jms:jme, n_tracer), INTENT(IN) :: tracer
@@ -2544,13 +2925,18 @@
 
       REAL, DIMENSION (ims:ime, kms:kme, jms:jme), intent(IN) :: turb_flux_u2,  &
           turb_flux_v2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_w2, &
-          turb_flux_utheta, turb_flux_vtheta, turb_flux_uqv, turb_flux_vqv
+          turb_flux_utheta, turb_flux_vtheta, turb_flux_uqv, turb_flux_vqv, &
+          turb_flux_uqc, turb_flux_vqc, turb_flux_uqr, turb_flux_vqr, turb_flux_uqi, turb_flux_vqi, &
+          turb_flux_uqs, turb_flux_vqs, turb_flux_uqg, turb_flux_vqg, turb_flux_uqnc, turb_flux_vqnc, &
+          turb_flux_uqnr, turb_flux_vqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_uqnwfa, turb_flux_vqnwfa, &
+          turb_flux_uqnifa, turb_flux_vqnifa
 
       REAL, INTENT(IN) :: rdx, rdy
 
         ! Local
       INTEGER :: im
       REAL, DIMENSION (its-1:ite, kts:kte, jts-1:jte) :: sf_alpha
+      REAL, DIMENSION (its:ite, kts:kte, jts:jte) :: hydromet_tend
 
       call Calc_slope_factor (config_flags, msftx, msfty, dx, dy, zx, zy, rdzw, sf_alpha, &
           ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
@@ -2574,6 +2960,99 @@
       call Horizontal_mixing_s_with_flux (moist_tendf, config_flags, msftx, msfty, rdx, rdy, &
           fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqv, turb_flux_vqv, &
           ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      if ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) then
+          ! Cloud mass
+        if ( p_qc .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qc_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqc, turb_flux_vqc, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qc_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Rain mass
+        if ( p_qr .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qr_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqr, turb_flux_vqr, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qr_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice mass
+        if ( p_qi .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qi_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqi, turb_flux_vqi, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qi_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Snow mass
+        if ( p_qs .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qs_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqs, turb_flux_vqs, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qs_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Graupel mass
+        if ( p_qg .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qg_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqg, turb_flux_vqg, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qg_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Cloud number
+        if ( p_qnc .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qnc_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqnc, turb_flux_vqnc, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qnc_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+           ! Rain number
+        if ( p_qnr .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qnr_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqnr, turb_flux_vqnr, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qnr_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice number
+        if ( p_qni .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qni_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqni, turb_flux_vqni, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qni_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Water friendly aerosol number
+        if ( p_qnwfa .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qnwfa_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqnwfa, turb_flux_vqnwfa, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qnwfa_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+          ! Ice friendly aerosol number
+        if ( p_qnifa .ge. param_first_scalar ) then
+          hydromet_tend(its:ite, kts:kte, jts:jte) = 0.0
+          hydromet_tend(its:ite, kts:kte, jts:jte) = qnifa_tendf(its:ite, kts:kte, jts:jte)
+          call Horizontal_mixing_s_with_flux (hydromet_tend, config_flags, msftx, msfty, rdx, rdy, &
+              fnm, fnp, zx, zy, rdz, rdzw, dnw, rho, sf_alpha, turb_flux_uqnifa, turb_flux_vqnifa, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          qnifa_tendf(its:ite, kts:kte, jts:jte) = hydromet_tend(its:ite, kts:kte, jts:jte)
+        end if
+      end if
 
       if (ss .eq. config_flags%pbl3d_nsteps .and. n_tracer .ge. param_first_scalar) then
         do im = param_first_scalar, n_tracer
@@ -5831,10 +6310,10 @@
               print *, '  i =', i, 'j = ', j, 'k = ', k
               print *, '  q_sq = ', q_sq(i, k, j)
               print *, '  l_master = ', l_master(i, k, j)
-              print *, '  b1 = ', b1
+              print *, '  b1 = ', b_1
             end if
             q_sq_dissip_tend(i, k, j) = 2. * ( q_sq(i, k, j) ** 1.5 ) /  &
-                                             ( b1 * l_master(i, k, j) )
+                                             ( b_1 * l_master(i, k, j) )
             q_sq_tend(i, k, j) = q_sq_tend(i, k, j) - ( (c1(k) * mut(i, j) + c2(k)) * q_sq_dissip_tend(i, k, j) / N_PBL3D )
 
             if ( DEBUG ) then
@@ -5920,7 +6399,7 @@
               turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v,                     &
               turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_utheta,                 &
               turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqv,                        &
-              turb_flux_vqv, turb_flux_wqv                                              )
+              turb_flux_vqv, turb_flux_wqv, du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                      !
@@ -5956,6 +6435,8 @@
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,      &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,            &
           turb_flux_uqv, turb_flux_vqv, turb_flux_wqv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dz_faces, dv_dz_faces, &
+                                                                     dthetav_dz_faces, dqv_dz_faces
 
       integer, intent(in) :: ids, ide, jds, jde, kds, kde, &
                              ims, ime, jms, jme, kms, kme, &
@@ -5975,7 +6456,8 @@
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                   &
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,       &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,             &
-          turb_flux_uqv, turb_flux_vqv, turb_flux_wqv                       )
+          turb_flux_uqv, turb_flux_vqv, turb_flux_wqv,                      &
+          du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces          )
 
     end subroutine Init_pbl3d
 
@@ -5994,7 +6476,8 @@
               turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                   &
               turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,       &
               turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,             &
-              turb_flux_uqv, turb_flux_vqv, turb_flux_wqv                       )
+              turb_flux_uqv, turb_flux_vqv, turb_flux_wqv,                      &
+              du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces          )
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                       !
@@ -6029,6 +6512,8 @@
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,      &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,            &
           turb_flux_uqv, turb_flux_vqv, turb_flux_wqv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dz_faces, dv_dz_faces, &
+                                                                     dthetav_dz_faces, dqv_dz_faces
 
         ! Local vars
       real, dimension (kts:kte) :: sqv
@@ -6057,6 +6542,8 @@
       call Calc_metric (ph, phb, rdz, rdzw, dz, z_at_mass, z_at_w, ids, ide, jds, jde, kds, kde, &
           ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, itf, jtf, ktf, i_start, i_end, j_start, j_end)
 
+      call Calc_thetav (t_2, qv, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, thetav)
+
         ! Calc vertical derivatives
       call Calc_du_dz (u, rdz, dnw, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, du_dz)
 
@@ -6066,14 +6553,25 @@
 
       call Calc_dmassvar_dz (qv, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqv_dz)
 
+        ! Save derivatives
+      do j = j_start, j_end
+        do k = kts, ktf + 1
+          do i = i_start, i_end
+           du_dz_faces(i, k, j) = du_dz(i, k, j)
+           dv_dz_faces(i, k, j) = dv_dz(i, k, j)
+           dqv_dz_faces(i, k, j) = dqv_dz(i, k, j)
+           dthetav_dz_faces(i, k, j) = dthetav_dz(i, k, j)
+          end do
+        end do
+      end do
+
         ! Call MY model to set initial state
-      call Set_init_turb_state_my (restart, pbl3d_constants, pbl3d_nsteps, pbl3d_opt, pbl3d_prog, pbl3d_sfc_opt, pbl3d_l_opt, &
-          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, &
-          itf, jtf, ktf, i_start, i_end, j_start, j_end, fnm, fnp, dnw, ph, phb, rdzw, z_at_mass, dz, &
-          t_2, qv, thetav, alt, u, v, ust, hfx, qfx, rmol, rho, du_dz, dv_dz, dthetav_dz, dqv_dz, &
-          q_sq, q_sq_prog, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
-          turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
-          turb_flux_theta2_v, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv)
+      call Set_init_turb_state_my (restart, pbl3d_constants, pbl3d_nsteps, pbl3d_opt, pbl3d_prog, pbl3d_sfc_opt, pbl3d_l_opt, ids, ide, &
+          jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, itf, jtf, ktf, i_start, i_end, j_start, j_end, &
+          fnm, fnp, dnw, ph, phb, rdzw, z_at_mass, dz, t_2, qv, alt, u, v, ust, hfx, qfx, rmol, rho, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+          q_sq, q_sq_prog, q_sq_vdiff, q_sq_hdiff, q_sq_shear, q_sq_buoyancy, q_sq_dissip, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, &
+          turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, &
+          turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv)
 
       if (DEBUG) print *, 'Done Set_init_turb_state_driver...'
 

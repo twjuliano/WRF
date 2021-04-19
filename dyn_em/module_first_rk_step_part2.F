@@ -48,12 +48,13 @@ CONTAINS
             ,halo_em_tke_5_sub,halo_obs_nudge_sub,period_bdy_em_a1_sub,period_bdy_em_phy_bc_sub &
             ,period_bdy_em_fdda_bc_sub,period_bdy_em_chem_sub,halo_em_phys_cu_sub,halo_em_helicity_sub &
             ,halo_em_phys_state_pbl3d_sub,halo_em_phys_substep_pbl3d_sub,halo_em_phys_diffusion_pbl3d_sub &
-            ,halo_em_pbl3d_3_sub,halo_em_pbl3d_5_sub &
-            ,period_bdy_em_state_pbl3d_sub,period_bdy_em_substep_pbl3d_sub,period_bdy_em_phy_bc_pbl3d_sub
+            ,halo_em_scalar_diffusion_pbl3d_sub,halo_em_pbl3d_3_sub,halo_em_pbl3d_5_sub &
+            ,period_bdy_em_state_pbl3d_sub,period_bdy_em_substep_pbl3d_sub,period_bdy_em_phy_bc_pbl3d_sub &
+            ,period_bdy_em_scalar_bc_pbl3d_sub
 #endif
 
     USE module_driver_constants
-    USE module_diffusion_em, ONLY : phy_bc, phy_bc_state_pbl3d, phy_bc_pbl3d, cal_deform_and_div, compute_diff_metrics, &
+    USE module_diffusion_em, ONLY : phy_bc, phy_bc_state_pbl3d, phy_bc_pbl3d, scalar_bc_pbl3d, cal_deform_and_div, compute_diff_metrics, &
                                     vertical_diffusion_2, horizontal_diffusion_2, calculate_km_kh, &
                                     tke_rhs, cal_helicity, &
                                     nonlocal_flux,meso_length_scale,free_atmos_length, &
@@ -1153,15 +1154,27 @@ BENCH_END(hor_diff_tim)
            DO ij = 1 , grid%num_tiles
              CALL wrf_debug (200 , ' call Calc_turb_fluxes_driver')
              CALL Calc_turb_fluxes_driver (config_flags = config_flags, &
-             dz = dz8w, z_at_mass = grid%z, & ! ok
-             u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, th = th_phy, th2 = grid%th_tmp, & ! ok
-             qv = grid%qv_tmp, thetav = grid%thetav, tsk = grid%tsk, t2=grid%t2, q2 = grid%q2, psfc = grid%psfc, & ! ok
-             rho = grid%rho_tmp, ust = grid%ust, hfx = grid%hfx, qfx = grid%qfx, & ! ok
-             rmol = grid%rmol, &
+             dz = dz8w, z_at_mass = grid%z, u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, &
+             th = th_phy, th2 = grid%th_tmp, qv = grid%qv_tmp, qc = moist(:,:,:,P_QC), &
+             qr = moist(:,:,:,P_QR), qi = moist(:,:,:,P_QI), qs = moist(:,:,:,P_QS), qg = moist(:,:,:,P_QG), &
+             qnc = scalar(:,:,:,P_QNC), qnr = scalar(:,:,:,P_QNR), qni = scalar(:,:,:,P_QNI), &
+             qnwfa = scalar(:,:,:,P_QNWFA), qnifa = scalar(:,:,:,P_QNIFA), &
+             thetav = grid%thetav, tsk = grid%tsk, t2=grid%t2, q2 = grid%q2, psfc = grid%psfc, &
+             rho = grid%rho_tmp, ust = grid%ust, hfx = grid%hfx, qfx = grid%qfx, rmol = grid%rmol, &
              du_dx_faces = grid%du_dx_faces, du_dy_faces = grid%du_dy_faces, du_dz_faces = grid%du_dz_faces, &
              dv_dx_faces = grid%dv_dx_faces, dv_dy_faces = grid%dv_dy_faces, dv_dz_faces = grid%dv_dz_faces, &
              dw_dx_faces = grid%dw_dx_faces, dw_dy_faces = grid%dw_dy_faces, dw_dz_faces = grid%dw_dz_faces, &
              dqv_dx_faces = grid%dqv_dx_faces, dqv_dy_faces = grid%dqv_dy_faces, dqv_dz_faces = grid%dqv_dz_faces, &
+             dqc_dx_faces = grid%dqc_dx_faces, dqc_dy_faces = grid%dqc_dy_faces, dqc_dz_faces = grid%dqc_dz_faces, &
+             dqr_dx_faces = grid%dqr_dx_faces, dqr_dy_faces = grid%dqr_dy_faces, dqr_dz_faces = grid%dqr_dz_faces, &
+             dqi_dx_faces = grid%dqi_dx_faces, dqi_dy_faces = grid%dqi_dy_faces, dqi_dz_faces = grid%dqi_dz_faces, &
+             dqs_dx_faces = grid%dqs_dx_faces, dqs_dy_faces = grid%dqs_dy_faces, dqs_dz_faces = grid%dqs_dz_faces, &
+             dqg_dx_faces = grid%dqg_dx_faces, dqg_dy_faces = grid%dqg_dy_faces, dqg_dz_faces = grid%dqg_dz_faces, &
+             dqnc_dx_faces = grid%dqnc_dx_faces, dqnc_dy_faces = grid%dqnc_dy_faces, dqnc_dz_faces = grid%dqnc_dz_faces, &
+             dqnr_dx_faces = grid%dqnr_dx_faces, dqnr_dy_faces = grid%dqnr_dy_faces, dqnr_dz_faces = grid%dqnr_dz_faces, &
+             dqni_dx_faces = grid%dqni_dx_faces, dqni_dy_faces = grid%dqni_dy_faces, dqni_dz_faces = grid%dqni_dz_faces, &
+             dqnwfa_dx_faces = grid%dqnwfa_dx_faces, dqnwfa_dy_faces = grid%dqnwfa_dy_faces, dqnwfa_dz_faces = grid%dqnwfa_dz_faces, &
+             dqnifa_dx_faces = grid%dqnifa_dx_faces, dqnifa_dy_faces = grid%dqnifa_dy_faces, dqnifa_dz_faces = grid%dqnifa_dz_faces, &
              dthetav_dx_faces = grid%dthetav_dx_faces, dthetav_dy_faces = grid%dthetav_dy_faces, dthetav_dz_faces = grid%dthetav_dz_faces, &
              itimestep = grid%itimestep, ss = ss, n_tracer = num_tracer, &
              q_sq = grid%q_sq, q_sq_prog = grid%q_sq_tmp, q_sq_tend = q_sq_tend_tmp, &
@@ -1183,8 +1196,17 @@ BENCH_END(hor_diff_tim)
              turb_flux_vtheta_v = grid%turb_flux_vtheta_v, & ! OK
              turb_flux_wtheta_v = grid%turb_flux_wtheta_v, & ! OK
              turb_flux_theta2_v = grid%turb_flux_theta2_v, & ! OK
-             turb_flux_uqv = grid%turb_flux_uqv, turb_flux_vqv = grid%turb_flux_vqv, &
-             turb_flux_wqv = grid%turb_flux_wqv, &
+             turb_flux_uqv = grid%turb_flux_uqv, turb_flux_vqv = grid%turb_flux_vqv, turb_flux_wqv = grid%turb_flux_wqv, &
+             turb_flux_uqc = grid%turb_flux_uqc, turb_flux_vqc = grid%turb_flux_vqc, turb_flux_wqc = grid%turb_flux_wqc, &
+             turb_flux_uqr = grid%turb_flux_uqr, turb_flux_vqr = grid%turb_flux_vqr, turb_flux_wqr = grid%turb_flux_wqr, &
+             turb_flux_uqi = grid%turb_flux_uqi, turb_flux_vqi = grid%turb_flux_vqi, turb_flux_wqi = grid%turb_flux_wqi, &
+             turb_flux_uqs = grid%turb_flux_uqs, turb_flux_vqs = grid%turb_flux_vqs, turb_flux_wqs = grid%turb_flux_wqs, &
+             turb_flux_uqg = grid%turb_flux_uqg, turb_flux_vqg = grid%turb_flux_vqg, turb_flux_wqg = grid%turb_flux_wqg, &
+             turb_flux_uqnc = grid%turb_flux_uqnc, turb_flux_vqnc = grid%turb_flux_vqnc, turb_flux_wqnc = grid%turb_flux_wqnc, &
+             turb_flux_uqnr = grid%turb_flux_uqnr, turb_flux_vqnr = grid%turb_flux_vqnr, turb_flux_wqnr = grid%turb_flux_wqnr, &
+             turb_flux_uqni = grid%turb_flux_uqni, turb_flux_vqni = grid%turb_flux_vqni, turb_flux_wqni = grid%turb_flux_wqni, &
+             turb_flux_uqnwfa = grid%turb_flux_uqnwfa, turb_flux_vqnwfa = grid%turb_flux_vqnwfa, turb_flux_wqnwfa = grid%turb_flux_wqnwfa, &
+             turb_flux_uqnifa = grid%turb_flux_uqnifa, turb_flux_vqnifa = grid%turb_flux_vqnifa, turb_flux_wqnifa = grid%turb_flux_wqnifa, &
              turb_flux_utheta = grid%turb_flux_utheta, &
              turb_flux_vtheta = grid%turb_flux_vtheta, &
              turb_flux_wtheta = grid%turb_flux_wtheta, &
@@ -1204,6 +1226,10 @@ BENCH_END(hor_diff_tim)
 #ifdef DM_PARALLEL
 #        include "HALO_EM_PHYS_DIFFUSION_PBL3D.inc"
 #        include "PERIOD_BDY_EM_PHY_BC_PBL3D.inc"
+         IF ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) THEN
+#          include "HALO_EM_SCALAR_DIFFUSION_PBL3D.inc"
+#          include "PERIOD_BDY_EM_SCALAR_BC_PBL3D.inc"
+         END IF
 #endif
 
            !$OMP PARALLEL DO   &
@@ -1226,18 +1252,47 @@ BENCH_END(hor_diff_tim)
            ENDDO
            !$OMP END PARALLEL DO
 
+           IF ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) THEN
+             !$OMP PARALLEL DO   &
+             !$OMP PRIVATE ( ij )
+             DO ij = 1 , grid%num_tiles
+               CALL wrf_debug ( 200 , ' call scalar_bc_pbl3d' )
+               CALL scalar_bc_pbl3d (config_flags,                                  &
+                    grid%turb_flux_uqc, grid%turb_flux_vqc, grid%turb_flux_uqc,     &
+                    grid%turb_flux_uqr, grid%turb_flux_vqr, grid%turb_flux_uqr,     &
+                    grid%turb_flux_uqi, grid%turb_flux_vqi, grid%turb_flux_uqi,     &
+                    grid%turb_flux_uqs, grid%turb_flux_vqs, grid%turb_flux_uqs,     &
+                    grid%turb_flux_uqg, grid%turb_flux_vqg, grid%turb_flux_uqg,     &
+                    grid%turb_flux_uqnc, grid%turb_flux_vqnc, grid%turb_flux_wqnc,  &
+                    grid%turb_flux_uqnr, grid%turb_flux_vqnr, grid%turb_flux_wqnr,  &
+                    grid%turb_flux_uqni, grid%turb_flux_vqni, grid%turb_flux_wqni,  &
+                    grid%turb_flux_uqnwfa, grid%turb_flux_vqnwfa, grid%turb_flux_wqnwfa, &
+                    grid%turb_flux_uqnifa, grid%turb_flux_vqnifa, grid%turb_flux_wqnifa, &
+                    ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme,     &
+                    ips, ipe, jps, jpe, kps, kpe, grid%i_start(ij), grid%i_end(ij), &
+                    grid%j_start(ij), grid%j_end(ij), k_start, k_end                )
+             ENDDO
+           END IF
+           !$OMP END PARALLEL DO
+
            !$OMP PARALLEL DO   &
            !$OMP PRIVATE ( ij )
            DO ij = 1 , grid%num_tiles
              CALL wrf_debug (200 , ' call Vertical_turb_mix')
              CALL Vertical_turb_mix (dth = t_tendf_tmp, du = ru_tendf_tmp, &
-                  dv = rv_tendf_tmp, dw = rw_tendf_tmp, dqv = moist_tend_tmp, &
+                  dv = rv_tendf_tmp, dw = rw_tendf_tmp, dqv = moist_tend_tmp, dqc = moist_tend(:,:,:,P_QC), &
+                  dqr = moist_tend(:,:,:,P_QR), dqi = moist_tend(:,:,:,P_QI), dqs = moist_tend(:,:,:,P_QS), &
+                  dqg = moist_tend(:,:,:,P_QG), dqnc = scalar_tend(:,:,:,P_QNC), dqnr = scalar_tend(:,:,:,P_QNR), &
+                  dqni = scalar_tend(:,:,:,P_QNI), dqnwfa = scalar_tend(:,:,:,P_QNWFA), dqnifa = scalar_tend(:,:,:,P_QNIFA), &
                   khz = grid%tf_khz, tracer = tracer, tracer_tend = tracer_tend, &
                   pbl3d_opt = config_flags%pbl3d_opt, ss = ss, &
                   config_flags = config_flags, &
                   turb_flux_wtheta = grid%turb_flux_wtheta, turb_flux_uw = grid%turb_flux_uw, turb_flux_vw = grid%turb_flux_vw, &
                   turb_flux_w2 = grid%turb_flux_w2, &
-                  turb_flux_wqv = grid%turb_flux_wqv, &
+                  turb_flux_wqv = grid%turb_flux_wqv, turb_flux_wqc = grid%turb_flux_wqc, turb_flux_wqr = grid%turb_flux_wqr, &
+                  turb_flux_wqi = grid%turb_flux_wqi, turb_flux_wqs = grid%turb_flux_wqs, turb_flux_wqg = grid%turb_flux_wqg, &
+                  turb_flux_wqnc = grid%turb_flux_wqnc, turb_flux_wqnr = grid%turb_flux_wqnr, turb_flux_wqni = grid%turb_flux_wqni, &
+                  turb_flux_wqnwfa = grid%turb_flux_wqnwfa, turb_flux_wqnifa = grid%turb_flux_wqnifa, &
                   rdz = grid%rdz, dnw = grid%dnw, dn = grid%dn,  rho = grid%rho_tmp, &
                   fnm = grid%fnm, fnp = grid%fnp,  &
                   n_tracer = num_tracer, &
@@ -1255,14 +1310,28 @@ BENCH_END(hor_diff_tim)
              DO ij = 1 , grid%num_tiles
                CALL wrf_debug (200 , ' call Horizontal_turb_mix')
                CALL Horizontal_turb_mix (rt_tendf = t_tendf_tmp, ru_tendf = ru_tendf_tmp, rv_tendf = rv_tendf_tmp, &
-                    rw_tendf = rw_tendf_tmp, moist_tendf = moist_tend_tmp, tracer_tend = tracer_tend, &
-                    tracer = tracer, n_tracer = num_tracer, khx = grid%tf_khx, khy = grid%tf_khy, &
+                    rw_tendf = rw_tendf_tmp, moist_tendf = moist_tend_tmp, qc_tendf = moist_tend(:,:,:,P_QC), &
+                    qr_tendf = moist_tend(:,:,:,P_QR), qi_tendf = moist_tend(:,:,:,P_QI), &
+                    qs_tendf = moist_tend(:,:,:,P_QS), qg_tendf = moist_tend(:,:,:,P_QG), &
+                    qnc_tendf = scalar_tend(:,:,:,P_QNC), qnr_tendf = scalar_tend(:,:,:,P_QNR), &
+                    qni_tendf = scalar_tend(:,:,:,P_QNI), qnwfa_tendf = scalar_tend(:,:,:,P_QNWFA), qnifa_tendf = scalar_tend(:,:,:,P_QNIFA), &
+                    tracer_tend = tracer_tend, tracer = tracer, n_tracer = num_tracer, khx = grid%tf_khx, khy = grid%tf_khy, &
                     ss = ss, config_flags = config_flags, &
                     turb_flux_u2 = grid%turb_flux_u2, turb_flux_v2 = grid%turb_flux_v2, &
                     turb_flux_uv = grid%turb_flux_uv, turb_flux_uw = grid%turb_flux_uw, &
                     turb_flux_vw = grid%turb_flux_vw, turb_flux_w2 = grid%turb_flux_w2, &
                     turb_flux_utheta = grid%turb_flux_utheta, turb_flux_vtheta = grid%turb_flux_vtheta, &
                     turb_flux_uqv = grid%turb_flux_uqv, turb_flux_vqv = grid%turb_flux_vqv, &
+                    turb_flux_uqc = grid%turb_flux_uqc, turb_flux_vqc = grid%turb_flux_vqc, &
+                    turb_flux_uqr = grid%turb_flux_uqr, turb_flux_vqr = grid%turb_flux_vqr, &
+                    turb_flux_uqi = grid%turb_flux_uqi, turb_flux_vqi = grid%turb_flux_vqi, &
+                    turb_flux_uqs = grid%turb_flux_uqs, turb_flux_vqs = grid%turb_flux_vqs, &
+                    turb_flux_uqg = grid%turb_flux_uqg, turb_flux_vqg = grid%turb_flux_vqg, &
+                    turb_flux_uqnc = grid%turb_flux_uqnc, turb_flux_vqnc = grid%turb_flux_vqnc, &
+                    turb_flux_uqnr = grid%turb_flux_uqnr, turb_flux_vqnr = grid%turb_flux_vqnr, &
+                    turb_flux_uqni = grid%turb_flux_uqni, turb_flux_vqni = grid%turb_flux_vqni, &
+                    turb_flux_uqnwfa = grid%turb_flux_uqnwfa, turb_flux_vqnwfa = grid%turb_flux_vqnwfa, &
+                    turb_flux_uqnifa = grid%turb_flux_uqnifa, turb_flux_vqnifa = grid%turb_flux_vqnifa, &
                     msfux = grid%msfux, msfuy = grid%msfuy, msfvx = grid%msfvx, msfvy = grid%msfvy, &
                     msftx = grid%msftx, msfty = grid%msfty, dx = grid%dx, dy = grid%dy, &
                     rdx = grid%rdx, rdy = grid%rdy, rdz = grid%rdz, rdzw = grid%rdzw, &

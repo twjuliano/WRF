@@ -6299,6 +6299,230 @@ END SUBROUTINE phy_bc_pbl3d
 !=======================================================================
 !=======================================================================
 
+SUBROUTINE scalar_bc_pbl3d ( config_flags,                                &
+                             turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, &
+                             turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+                             turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
+                             turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, &
+                             turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, &
+                             turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc,  &
+                             turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr,  &
+                             turb_flux_uqni, turb_flux_vqni, turb_flux_wqni,  &
+                             turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, &
+                             turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
+                             ids, ide, jds, jde, kds, kde,                &
+                             ims, ime, jms, jme, kms, kme,                &
+                             ips, ipe, jps, jpe, kps, kpe,                &
+                             its, ite, jts, jte, kts, kte                 )
+
+!------------------------------------------------------------------------------
+! Begin declarations.
+
+   IMPLICIT NONE
+
+   TYPE(grid_config_rec_type), INTENT(IN   ) :: config_flags
+
+   INTEGER ,        INTENT(IN   ) ::        ids, ide, jds, jde, kds, kde, &
+                                            ims, ime, jms, jme, kms, kme, &
+                                            ips, ipe, jps, jpe, kps, kpe, &
+                                            its, ite, jts, jte, kts, kte
+
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: turb_flux_uqc, &
+      turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+      turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs, &
+      turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, &
+      turb_flux_vqnc, turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, &
+      turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, turb_flux_uqnwfa, turb_flux_vqnwfa, &
+      turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa
+
+! End declarations.
+!-----------------------------------------------------------------------
+
+   CALL set_physical_bc3d( turb_flux_uqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqc, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqr, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqi, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqs, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqg, 'w', config_flags,         &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnc, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnr, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqni, 'w', config_flags,        &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnwfa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_uqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_vqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( turb_flux_wqnifa, 'w', config_flags,      &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+END SUBROUTINE scalar_bc_pbl3d
+
+!=======================================================================
+!=======================================================================
+
     SUBROUTINE tke_rhs( tendency, BN2, config_flags,            &
                         defor11, defor22, defor33,              &
                         defor12, defor13, defor23,              &

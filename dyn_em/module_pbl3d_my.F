@@ -39,7 +39,7 @@
     use, intrinsic :: iso_fortran_env
 
     use module_model_constants, only: KARMAN, G, P608, T0, CP, RCP
-    use module_state_description, only: param_first_scalar
+    use module_state_description, only: p_qc, p_qr, p_qi, p_qs, p_qg, p_qnc, p_qnr, p_qni, p_qnwfa, p_qnifa, param_first_scalar
     use module_big_step_utilities_em, only: grid_config_rec_type
 
     implicit none
@@ -59,7 +59,8 @@
     integer, parameter :: WORKING_PREC = SP
 
       ! Model constants
-    real, public :: a1, a2, b1, b2, c1, c2, c3, alpha, lambda
+    real         :: a_1, b_2, c_1, c_2, c_3, alpha, lambda
+    real, public :: a_2, b_1
 
       ! For the level 2 model
     real :: rif_c, rf1, rf2, cm, ch2
@@ -71,9 +72,15 @@
 
     subroutine Calc_turb_fluxes_my (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
               du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dqv_dx, dqv_dy, dqv_dz, dthetav_dx, dthetav_dy, dthetav_dz, &
-              itimestep, ss, n_tracer, q_sq, q_sq_prog, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
+              dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, itimestep, ss, n_tracer, q_sq, q_sq_prog, &
+              l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
               turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv, &
-              turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, msfux, msfuy, msfvx, msfvy, msftx, msfty, &
+              turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, &
+              turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
+              turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc, &
+              turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, &
+              turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
+              msfux, msfuy, msfvx, msfvy, msftx, msfty, &
               dx, dy, rdx, rdy, dn, dnw, rdz, dt, id, rdzw, fnm, fnp, cf1, cf2, cf3, zx, zy, mut, c1h, c2h, ids, ide, jds, jde, kds, kde, &
               ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
@@ -96,19 +103,22 @@
           w, th, th2, qv, rho, zx, zy, rdz, rdzw
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq, q_sq_prog
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)   :: du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, &
-                              dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy, dqv_dz
+          dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy, dqv_dz, dqc_dz, dqr_dz,    &
+          dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_master_at_mass
       real, dimension (ims:ime, jms:jme),          intent (in)    :: msfux, msfuy, msfvx, msfvy, msftx, msfty
       real, dimension (ims:ime, jms:jme),          intent (in)    :: tsk, t2, thetav, q2, psfc, ust, hfx, qfx, rmol
       real, dimension (ims:ime, jms:jme),          intent (in)    :: mut
       real, dimension (kms:kme),                   intent (in)    :: c1h, c2h
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: turb_flux_u2, turb_flux_v2, turb_flux_w2, &
-                                                                     turb_flux_uv, turb_flux_uw, turb_flux_vw, &
-                                                                     turb_flux_utheta_v, turb_flux_vtheta_v,   &
-                                                                     turb_flux_wtheta_v, turb_flux_theta2_v,   &
-                                                                     turb_flux_uqv, turb_flux_vqv,             &
-                                                                     turb_flux_wqv, turb_flux_utheta,          &
-                                                                     turb_flux_vtheta, turb_flux_wtheta
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: turb_flux_u2, turb_flux_v2, turb_flux_w2,  &
+          turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
+          turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta,  &
+          turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr,          &
+          turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs,             &
+          turb_flux_wqs, turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc,           &
+          turb_flux_wqnc, turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni,       &
+          turb_flux_wqni, turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa,               &
+          turb_flux_vqnifa, turb_flux_wqnifa
       real, dimension (kms:kme),                   intent (in)    :: fnm, fnp, dn, dnw
       real,                                        intent (in)    :: dx, dy, rdx, rdy, cf1, cf2, cf3, dt
       integer,                                     intent (in)    :: ids, ide, jds, jde, kds, kde, &
@@ -120,13 +130,19 @@
       integer :: i, j, k, i_start, i_end, j_start, j_end, ktf
 
       if (config_flags%pbl3d_opt < 2) then  ! PBL approx analytical solution only
-        call Calc_fluxes_pbl_approx (config_flags, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+        call Calc_fluxes_pbl_approx (config_flags, ss, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+            dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, &
             th2, qv, dn, dnw, fnm, fnp, dx, dy, dz, zx, zy, msftx, msfty, rdz, rdzw, cf1, cf2, cf3, dt, id, &
             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts,    &
             jte, kts, kte, q_sq, q_sq_prog, turb_flux_u2, turb_flux_v2, turb_flux_w2,     &
             turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                 &
             turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv,    &
             turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, &
+            turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+            turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, &
+            turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc, &
+            turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, &
+            turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
             u, v, w, thetav, rho, ust, hfx, qfx, rmol)
       else if (config_flags%pbl3d_opt == 2) then  ! Full 3D numerical solution
         call Calc_fluxes (config_flags, id, config_flags%specified, q_sq, q_sq_prog, l_master, du_dx, du_dy, du_dz, dv_dx, dv_dy,   &
@@ -226,12 +242,13 @@
     end subroutine Fill_q_sq_prog_with_q_sq
 
 
-    subroutine Calc_l_my_algebra_l2_or_l2p5 (my_level, pbl3d_l_opt, q_sq, z, dz, rdzw, rmol, wthv, dthetav_dz, l_master_l2, l_master_l2_in, l_master_l2p5, &
+    subroutine Calc_l_master_algebra (pbl3d_l_opt, q_sq, dz, rdzw, rmol, wthv, dthetav_dz, l_master, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !                                                             !
         ! Purpose: Calculates the master length scale following MY74  !
+        !          Also included MYNN length scale formulation        !
         !                                                             !
         ! Author: Pedro A. Jimenez & Timothy W. Juliano               !
         !                                                             !
@@ -241,16 +258,13 @@
 
       implicit none
 
-      character (len = *), intent(in) :: my_level
-      integer,                                     intent (in), optional  :: pbl3d_l_opt
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: q_sq
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in), optional  :: z, dz, rdzw
-      real, dimension (ims:ime, jms:jme),          intent (in), optional  :: rmol
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in), optional  :: wthv
-      real, dimension (its:ite, kts:kte, jts:jte), intent (in), optional  :: dthetav_dz
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out), optional :: l_master_l2
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in), optional :: l_master_l2_in
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out), optional :: l_master_l2p5
+      integer,                                     intent (in) :: pbl3d_l_opt
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: q_sq
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: dz, rdzw
+      real, dimension (ims:ime, jms:jme),          intent (in) :: rmol
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: wthv
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in) :: dthetav_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: l_master
       integer,                                     intent (in)  :: ids, ide, jds, jde, kds, kde, &
                                                                    ims, ime, jms, jme, kms, kme, &
                                                                    its, ite, jts, jte, kts, kte
@@ -288,141 +302,72 @@
       j_end = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      level: if (my_level == 'l2') then   ! level 2 model
-
-           ! Calculates l0 (Eq. 72 MY74)
-        do j = j_start, j_end
-          do i = i_start, i_end
-            l0_num = SMALL_VAL
-            l0_den = SMALL_VAL
-            z_at_walls_1d(kts) = 0.0
-            do k = kts + 1, ktf
-              z_at_walls_1d(k) = z_at_walls_1d(k - 1) + 1.0 / rdzw(i, k - 1, j)
-              dz_wall = 0.5 * (dz(i, k, j) + dz(i, k - 1, j))
-              q = Sqrt (q_sq(i, k, j))
-              q_dz = q * dz_wall
-              l0_num = l0_num + q_dz * z_at_walls_1d(k)
-              l0_den = l0_den + q_dz
-            end do
-            z_at_walls_1d(ktf + 1) = z_at_walls_1d(ktf) + 1.0 / rdzw(i, ktf, j)
-
-            if (pbl3d_l_opt == 1) then  ! MY alpha
-              l0 = alpha * l0_num / l0_den
-            else if (pbl3d_l_opt == 2) then  ! MYNN alpha
-              l0 = alpha_1 * l0_num / l0_den
-              q_c = (G_OVER_TREF * Max (wthv(i, kts, j), 0.0) * l0) ** ( 1.0 / 3.0 )
-            end if
-
-            do k = kts, ktf
-              if (pbl3d_l_opt == 1) then
-                 ! Calculates master length scale (Eq. 71 MY74)
-                l_master_l2(i, k, j) = l0 * KARMAN * z_at_walls_1d(k) / (KARMAN * z_at_walls_1d(k) + l0)
-              else if (pbl3d_l_opt == 2) then
-                 ! Calculates master length scale (Nakanishi 2001)
-                 ! l surface
-                kz  = KARMAN * z_at_walls_1d(k)
-                zet = rmol(i, j) * z_at_walls_1d(k)
-                if (zet > 0.0) then
-                  l_s = kz / (1.0 + cns * MIN(1.0, zet))
-                else
-                  l_s = kz * (1.0 - alpha_4 * zet) ** 0.2
-                end if
-                 ! l buoyancy
-                if (dthetav_dz(i, k, j) > 0.0) then
-                  N = Sqrt (G_OVER_TREF * dthetav_dz(i, k, j))
-                   ! note q_c is a velocity scale defined on the ground hence kts index
-                  l_b = alpha_2 * Sqrt (q_sq(i, k, j)) / N * ( 1.0 + alpha_3 / alpha_2 * Sqrt (q_c / (l0 * N)) )
-                  l_f = alpha_2 * Sqrt (q_sq(i, k, j)) / N
-                else
-                  l_b = 1.0E10
-                  l_f = l_b
-                end if
-
-                l_master_l2(i, k, j) = MIN( (l_s * l0 * l_b) / (l_s * l0 + l_s * l_b + l0 * l_b), l_f )
-
-              end if
-            end do
-            l_master_l2(i, kte, j) = l_master_l2(i, ktf, j)
-
-            if (DEBUG) call Debug_l_my_algebra
-
+         ! Calculates l0 (Eq. 72 MY74)
+      do j = j_start, j_end
+        do i = i_start, i_end
+          l0_num = SMALL_VAL
+          l0_den = SMALL_VAL
+          z_at_walls_1d(kts) = 0.0
+          do k = kts + 1, ktf
+            z_at_walls_1d(k) = z_at_walls_1d(k - 1) + 1.0 / rdzw(i, k - 1, j)
+            dz_wall = 0.5 * (dz(i, k, j) + dz(i, k - 1, j))
+            q = Sqrt (q_sq(i, k, j))
+            q_dz = q * dz_wall
+            l0_num = l0_num + q_dz * z_at_walls_1d(k)
+            l0_den = l0_den + q_dz
           end do
-        end do
+          z_at_walls_1d(ktf + 1) = z_at_walls_1d(ktf) + 1.0 / rdzw(i, ktf, j)
 
-      else if (my_level == 'l2p5') then   ! level 2.5 model
+          if (pbl3d_l_opt == 1) then  ! MY alpha
+            l0 = alpha * l0_num / l0_den
+          else if (pbl3d_l_opt == 2) then  ! MYNN alpha
+            l0 = alpha_1 * l0_num / l0_den
+            q_c = (G_OVER_TREF * Max (wthv(i, kts, j), 0.0) * l0) ** ( 1.0 / 3.0 )
+          end if
 
-        do j = j_start, j_end
           do k = kts, ktf
-            do i = i_start, i_end
-              l_master_l2p5(i, k, j) = 0.5 * ( l_master_l2_in(i, k + 1, j) + l_master_l2_in(i, k, j) )
-              if (l_master_l2p5(i, k, j) == 0.0) then
-                print *, '--------------------------------------------------'
-                print *, 'Bad l_master value at i, k, j = ', i, k, j, l_master_l2p5(i, k, j), l_master_l2_in(i, k + 1, j), l_master_l2_in(i, k, j)
+            if (pbl3d_l_opt == 1) then
+               ! Calculates master length scale (Eq. 71 MY74)
+              l_master(i, k, j) = l0 * KARMAN * z_at_walls_1d(k) / (KARMAN * z_at_walls_1d(k) + l0)
+            else if (pbl3d_l_opt == 2) then
+               ! Calculates master length scale (Nakanishi 2001)
+               ! l surface
+              kz  = KARMAN * z_at_walls_1d(k)
+              zet = rmol(i, j) * z_at_walls_1d(k)
+              if (zet > 0.0) then
+                l_s = kz / (1.0 + cns * MIN(1.0, zet))
+              else
+                l_s = kz * (1.0 - alpha_4 * zet) ** 0.2
               end if
-            end do
+               ! l buoyancy
+              if (dthetav_dz(i, k, j) > 0.0) then
+                N = Sqrt (G_OVER_TREF * dthetav_dz(i, k, j))
+                 ! note q_c is a velocity scale defined on the ground hence kts index
+                l_b = alpha_2 * Sqrt (q_sq(i, k, j)) / N * ( 1.0 + alpha_3 / alpha_2 * Sqrt (q_c / (l0 * N)) )
+                l_f = alpha_2 * Sqrt (q_sq(i, k, j)) / N
+              else
+                l_b = 1.0E10
+                l_f = l_b
+              end if
+
+              l_master(i, k, j) = MIN( (l_s * l0 * l_b) / (l_s * l0 + l_s * l_b + l0 * l_b), l_f )
+
+            end if
           end do
+          l_master(i, kte, j) = l_master(i, ktf, j)
+
+          if (DEBUG) call Debug_l_my_algebra
+
         end do
-
-
-           ! Calculates l0 (Eq. 72 MY74)
-!        do j = j_start, j_end
-!          do i = i_start, i_end
-!            l0_num = SMALL_VAL
-!            l0_den = SMALL_VAL
-!            z_at_walls_1d(kts) = z(i, kts, j)
-!            dz_wall = z(i, kts, j)
-!            q = Sqrt (q_sq(i, kts, j))
-!            q_dz = q * dz_wall
-!            l0_num = l0_num + q_dz * z_at_walls_1d(kts)
-!            l0_den = l0_den + q_dz
-!            if (i==2 .and. j==1) then
-!              print *, 'l2p5'
-!              print *, q, q_dz, l0_num/l0_den
-!            end if
-!            do k = kts + 1, ktf
-!              z_at_walls_1d(k) = z(i, k, j)
-!              dz_wall = z(i, k, j) - z(i, k - 1, j)
-!              q = Sqrt (q_sq(i, k, j))
-!              q_dz = q * dz_wall
-!              l0_num = l0_num + q_dz * z_at_walls_1d(k)
-!              l0_den = l0_den + q_dz
-!              if (i==2 .and. j==1) then
-!                print *, 'l2p5'
-!                print *, q, q_dz, l0_num/l0_den
-!              end if
-!            end do
-
-!            l0 = alpha * l0_num / l0_den
-
-             ! Calculates master length scale (Eq. 71 MY74)
-!            do k = kts, ktf
-!              l_master_l2p5(i, k, j) = l0 * KARMAN * z_at_walls_1d(k) / (KARMAN * z_at_walls_1d(k) + l0)
-!            end do
-
-!            if (DEBUG) then
-!              print *, 'l_master_l2p5 = '
-!              print *, l_master_l2p5(I_TO_TEST, :, J_TO_TEST)
-!              print *, 'l0 =', l0
-!              print *, 'l0_num =', l0_num
-!              print *, 'l0_den =', l0_den
-!              print *, 'z_at_walls = '
-!              print *, z_at_walls_1d
-!              print *, 'dz = '
-!              print *, 0.5 * (z(i, 2:ktf, j) - z(i, 1:ktf-1, j))
-!            end if
-
-!          end do
-!        end do
-
-      end if level
+      end do
 
       contains
 
-        subroutine Debug_l_my_algebra
+        subroutine Debug_l_master_algebra
 
           if (i == I_TO_TEST .and. j == J_TO_TEST) then
               print *, 'l_master = '
-              print *, l_master_l2(I_TO_TEST, :, J_TO_TEST)
+              print *, l_master(I_TO_TEST, :, J_TO_TEST)
               print *, 'l0 =', l0
               print *, 'l0_num =', l0_num
               print *, 'l0_den =', l0_den
@@ -436,18 +381,24 @@
               print *, 1.0 / rdzw(i, :, j)
             end if
 
-        end subroutine Debug_l_my_algebra
+        end subroutine Debug_l_master_algebra
 
-    end subroutine Calc_l_my_algebra_l2_or_l2p5
+    end subroutine Calc_l_master_algebra
 
 
-    subroutine Calc_fluxes_pbl_approx (config_flags, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+    subroutine Calc_fluxes_pbl_approx (config_flags, ss, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+              dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, &
               t, qv, dn, dnw, fnm, fnp, dx, dy, dz, zx, zy, msftx, msfty, rdz, rdzw, cf1, cf2, cf3, dt, id, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts,    &
               jte, kts, kte, q_sq, q_sq_prog, turb_flux_u2, turb_flux_v2, turb_flux_w2,     &
               turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                 &
               turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv,    &
               turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, &
+              turb_flux_uqc, turb_flux_vqc, turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, &
+              turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, turb_flux_uqs, turb_flux_vqs, turb_flux_wqs, &
+              turb_flux_uqg, turb_flux_vqg, turb_flux_wqg, turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc, &
+              turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr, turb_flux_uqni, turb_flux_vqni, turb_flux_wqni, &
+              turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
               u, v, w, thetav, rho, ust, hfx, qfx, rmol)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -465,11 +416,13 @@
       implicit none
 
       type (grid_config_rec_type),                 intent (in)    :: config_flags
+      integer,                                     intent (in)    :: ss
 
       real, dimension (kms:kme),                   intent (in)    :: dn, dnw, fnm, fnp
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: dz, zx, zy, rdz, rdzw
       real,                                        intent (in)    :: cf1, cf2, cf3, dt, dx, dy
-      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz, &
+          dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master
@@ -477,7 +430,17 @@
           turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw,        &
           turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v,                  &
           turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv,             &
-          turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta
+          turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,                        &
+          turb_flux_uqc, turb_flux_vqc, turb_flux_wqc,                                 &
+          turb_flux_uqr, turb_flux_vqr, turb_flux_wqr,                                 &
+          turb_flux_uqi, turb_flux_vqi, turb_flux_wqi,                                 &
+          turb_flux_uqs, turb_flux_vqs, turb_flux_wqs,                                 &
+          turb_flux_uqg, turb_flux_vqg, turb_flux_wqg,                                 &
+          turb_flux_uqnc, turb_flux_vqnc, turb_flux_wqnc,                              &
+          turb_flux_uqnr, turb_flux_vqnr, turb_flux_wqnr,                              &
+          turb_flux_uqni, turb_flux_vqni, turb_flux_wqni,                              &
+          turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa,                        &
+          turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: u, v, w, t, thetav, rho, qv
       real, dimension (ims:ime, jms:jme),          intent (in)  :: msftx, msfty, ust, hfx, qfx, rmol
       integer, intent (in)    :: id
@@ -487,75 +450,170 @@
 
         ! local vars
       real, dimension (its:ite, kts:kte, jts:jte) :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
-      logical, parameter :: use_hl88 = .true.
-      character (4) :: my_level, mass_or_face
-
-      mass_or_face = 'face'
 
         ! Calculate q_sq (level 2) or Fill q_sq with prognostic q_sq (level 2.5)
       if ( config_flags%pbl3d_prog .eq. 0 ) then   ! level 2 model
-        my_level = 'l2'
-          ! Calc stability functions for level 2 model
-        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-           ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-           its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
-        call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
-          ! Relax q_sq at the boundaries (only for parent domain and specified B.C. runs)
-        if ( id .eq. 1 .and. config_flags%specified) then
-          call Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-        end if
+        call Prep_for_fluxes_l2 (config_flags, q_sq, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, du_dz, dv_dz, &
+            dthetav_dz, dqv_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       else if ( config_flags%pbl3d_prog .gt. 0 ) then   ! level 2.5 model
-        if (use_hl88) then   ! calc sm and sh then q_sq for level 2 model to prepare for HL88 fix
-          my_level = 'l2'
-          call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-              ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-              its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
-          call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-              jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-              jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, sm=sm_l2, rif=rif)
-        end if
-        call Fill_q_sq_with_q_sq_prog (q_sq_prog, q_sq, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
-            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-        my_level = 'l2p5'
-          ! Calc stability functions for level 2.5 model
-        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-          jts=jts, jte=jte, kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
+        call Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, &
+            du_dz, dv_dz, dthetav_dz, dqv_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
         ! Diagnose master length scale at faces
-      my_level = 'l2'
-      call Calc_l_my_algebra_l2_or_l2p5 (my_level=my_level, pbl3d_l_opt=config_flags%pbl3d_l_opt, q_sq=q_sq, dz=dz, rdzw=rdzw, rmol=rmol, &
-          wthv=turb_flux_wtheta_v, l_master_l2=l_master, dthetav_dz=dthetav_dz, &
-          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+      call Calc_l_master_algebra (config_flags%pbl3d_l_opt, q_sq, dz, rdzw, rmol, turb_flux_wtheta_v, dthetav_dz, l_master, &
+          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
         ! Diagnose momentum, heat, moisture fluxes for pbl approx
       if ( config_flags%pbl3d_prog .eq. 0 ) then  ! For level 2 model, no need for realizability
-        call Diagnose_fluxes_pbl_approx (fnm=fnm, fnp=fnp, u=u, v=v, t=t, thetav=thetav, rho=rho, qv=qv, ust=ust, hfx=hfx, qfx=qfx, &
-            sm_tilde=sm, sh_tilde=sh, rif=rif, q_sq=q_sq, l_master=l_master, &
-            du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, u2=turb_flux_u2, v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, &
-            uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, &
-            uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, uth=turb_flux_utheta, vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, &
-            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+        call Diagnose_fluxes_pbl_approx (do_scalar_mix=config_flags%pbl3d_scalar_mix, ss=ss, nsteps=config_flags%pbl3d_nsteps, &
+            fnm=fnm, fnp=fnp, t=t, qv=qv, ust=ust, hfx=hfx, qfx=qfx, sm_tilde=sm, sh_tilde=sh, rif=rif, &
+            q_sq=q_sq, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, &
+            dqc_dz=dqc_dz, dqr_dz=dqr_dz, dqi_dz=dqi_dz, dqs_dz=dqs_dz, dqg_dz=dqg_dz, dqnc_dz=dqnc_dz, &
+            dqnr_dz=dqnr_dz, dqni_dz=dqni_dz, dqnwfa_dz=dqnwfa_dz, dqnifa_dz=dqnifa_dz, u2=turb_flux_u2, &
+            v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, &
+            wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, &
+            uqc=turb_flux_uqc, vqc=turb_flux_vqc, wqc=turb_flux_wqc, uqr=turb_flux_uqr, vqr=turb_flux_vqr, wqr=turb_flux_wqr, &
+            uqi=turb_flux_uqi, vqi=turb_flux_vqi, wqi=turb_flux_wqi, uqs=turb_flux_uqs, vqs=turb_flux_vqs, wqs=turb_flux_wqs, &
+            uqg=turb_flux_uqg, vqg=turb_flux_vqg, wqg=turb_flux_wqg, uqnc=turb_flux_uqnc, vqnc=turb_flux_vqnc, &
+            wqnc=turb_flux_wqnc, uqnr=turb_flux_uqnr, vqnr=turb_flux_vqnr, wqnr=turb_flux_wqnr, uqni=turb_flux_uqni, &
+            vqni=turb_flux_vqni, wqni=turb_flux_wqni, uqnwfa=turb_flux_uqnwfa, vqnwfa=turb_flux_vqnwfa, wqnwfa=turb_flux_wqnwfa, &
+            uqnifa=turb_flux_uqnifa, vqnifa=turb_flux_vqnifa, wqnifa=turb_flux_wqnifa, uth=turb_flux_utheta, &
+            vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, &
+            ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
       else if ( config_flags%pbl3d_prog .gt. 0 ) then  ! For level 2.5 model, include information for HL88 mod
-        call Diagnose_fluxes_pbl_approx (fnm=fnm, fnp=fnp, u=u, v=v, t=t, thetav=thetav, rho=rho, qv=qv, ust=ust, hfx=hfx, qfx=qfx, &
-            sm_tilde=sm, sh_tilde=sh, sm_l2=sm_l2, sh_l2=sh_l2, rif=rif, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master=l_master, &
-            du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, u2=turb_flux_u2, v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, &
-            uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, &
-            uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, uth=turb_flux_utheta, vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, &
-            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+        call Diagnose_fluxes_pbl_approx (do_scalar_mix=config_flags%pbl3d_scalar_mix, ss=ss, nsteps=config_flags%pbl3d_nsteps, &
+            fnm=fnm, fnp=fnp, t=t, qv=qv, ust=ust, hfx=hfx, qfx=qfx, sm_tilde=sm, sh_tilde=sh, sm_l2=sm_l2, sh_l2=sh_l2, rif=rif, &
+            q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, &
+            dqc_dz=dqc_dz, dqr_dz=dqr_dz, dqi_dz=dqi_dz, dqs_dz=dqs_dz, dqg_dz=dqg_dz, dqnc_dz=dqnc_dz, &
+            dqnr_dz=dqnr_dz, dqni_dz=dqni_dz, dqnwfa_dz=dqnwfa_dz, dqnifa_dz=dqnifa_dz, u2=turb_flux_u2, &
+            v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, &
+            wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, &
+            uqc=turb_flux_uqc, vqc=turb_flux_vqc, wqc=turb_flux_wqc, uqr=turb_flux_uqr, vqr=turb_flux_vqr, wqr=turb_flux_wqr, &
+            uqi=turb_flux_uqi, vqi=turb_flux_vqi, wqi=turb_flux_wqi, uqs=turb_flux_uqs, vqs=turb_flux_vqs, wqs=turb_flux_wqs, &
+            uqg=turb_flux_uqg, vqg=turb_flux_vqg, wqg=turb_flux_wqg, uqnc=turb_flux_uqnc, vqnc=turb_flux_vqnc, &
+            wqnc=turb_flux_wqnc, uqnr=turb_flux_uqnr, vqnr=turb_flux_vqnr, wqnr=turb_flux_wqnr, uqni=turb_flux_uqni, &
+            vqni=turb_flux_vqni, wqni=turb_flux_wqni, uqnwfa=turb_flux_uqnwfa, vqnwfa=turb_flux_vqnwfa, wqnwfa=turb_flux_wqnwfa, &
+            uqnifa=turb_flux_uqnifa, vqnifa=turb_flux_vqnifa, wqnifa=turb_flux_wqnifa, uth=turb_flux_utheta, &
+            vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, &
+            ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
       end if
 
-      call Diagnose_fluxes_surface (config_flags%pbl3d_sfc_opt, u, v, t, thetav, rho, dz, qv, ust, hfx, qfx, &
+      call Diagnose_fluxes_surface (config_flags%pbl3d_sfc_opt, u, v, t, rho, dz, qv, ust, hfx, qfx, &
           rmol, q_sq, l_master, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
           turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, &
           turb_flux_wtheta, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
     end subroutine Calc_fluxes_pbl_approx
+
+
+    subroutine Prep_for_fluxes_l2 (config_flags, q_sq, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, du_dz, dv_dz, &
+              dthetav_dz, dqv_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                    !
+      ! Purpose: Calculate stability functions for q_sq diagnosis          !
+      !                                                                    !
+      ! Author: Timothy W. Juliano                                         !
+      !                                                                    !
+      ! Comments: Stability functions and q_sq are calculated at the faces !
+      !                                                                    !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      type (grid_config_rec_type),                 intent (in)    :: config_flags
+
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
+      integer, intent (in)    :: id
+      integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
+                                 ims, ime, jms, jme, kms, kme, &
+                                 its, ite, jts, jte, kts, kte
+
+        ! local vars
+      character (4) :: my_level, mass_or_face
+
+      mass_or_face = 'face'
+
+      my_level = 'l2'
+        ! Calc stability functions for level 2 model
+      call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+         ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+         its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
+      call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
+          jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
+        ! Relax q_sq at the boundaries (only for parent domain and specified B.C. runs)
+      if ( id .eq. 1 .and. config_flags%specified) then
+        call Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      end if
+
+    end subroutine Prep_for_fluxes_l2
+
+
+    subroutine Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, &
+              du_dz, dv_dz, dthetav_dz, dqv_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                           !
+      ! Purpose: Calculate stability functions for q_sq diagnosis (level 2 model) !
+      !          so that we can apply HL88 realizability criterion                !
+      !          Also calculate stability functions for level 2.5 model           !
+      !                                                                           !
+      ! Author: Timothy W. Juliano                                                !
+      !                                                                           !
+      ! Comments: Stability functions and q_sq are calculated at the faces        !
+      !                                                                           !
+      ! References: Helfand and Labraga (1988, JAS)                               !
+      !                                                                           !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      type (grid_config_rec_type),                 intent (in)    :: config_flags
+
+      real, dimension (kms:kme),                   intent (in)    :: dn, dnw, fnm, fnp
+      real,                                        intent (in)    :: cf1, cf2, cf3
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
+      integer, intent (in)    :: id
+      integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
+                                 ims, ime, jms, jme, kms, kme, &
+                                 its, ite, jts, jte, kts, kte
+
+        ! local vars
+      logical, parameter :: use_hl88 = .true.
+      character (4) :: my_level, mass_or_face
+
+      mass_or_face = 'face'
+
+      if (use_hl88) then   ! calc sm and sh then q_sq for level 2 model to prepare for HL88 fix
+        my_level = 'l2'
+        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+            ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
+        call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
+            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, sm=sm_l2, rif=rif)
+      end if
+      call Fill_q_sq_with_q_sq_prog (q_sq_prog, q_sq, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+          ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      my_level = 'l2p5'
+        ! Calc stability functions for level 2.5 model
+      call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+        jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, &
+        kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
+
+    end subroutine Prep_for_fluxes_l2p5
 
 
     subroutine Calc_fluxes (config_flags, id, specified, q_sq, q_sq_prog, l_master, du_dx, du_dy, du_dz, dv_dx, dv_dy,  &
@@ -645,8 +703,8 @@
           call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
               ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
               its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
-          call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-              jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
+          call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+              ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
               jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, sm=sm_l2, rif=rif)
         end if
         call Fill_q_sq_with_q_sq_prog (q_sq_prog, q_sq, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
@@ -654,16 +712,13 @@
         my_level = 'l2p5'
           ! Calc stability functions for level 2.5 model
         call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-          jts=jts, jte=jte, kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
+          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, &
+          kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
       end if
 
         ! Diagnose master length scale at faces
-      my_level = 'l2'
-      call Calc_l_my_algebra_l2_or_l2p5 (my_level=my_level, pbl3d_l_opt=config_flags%pbl3d_l_opt, q_sq=q_sq, dz=dz, rdzw=rdzw, rmol=rmol, &
-          wthv=turb_flux_wtheta_v, l_master_l2=l_master, dthetav_dz=dthetav_dz, &
-          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+      call Calc_l_master_algebra (config_flags%pbl3d_l_opt, q_sq, dz, rdzw, rmol, turb_flux_wtheta_v, dthetav_dz, l_master, &
+          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       mat_cond_heat(its:ite,kts:kte,jts:jte) = -9999.
       mat_cond_moist(its:ite,kts:kte,jts:jte) = -9999.
@@ -738,7 +793,7 @@
         end do loop_k
       end do loop_j
 
-      call Diagnose_fluxes_surface (config_flags%pbl3d_sfc_opt, u, v, t, thetav, rho, dz, qv, ust, hfx, qfx, &
+      call Diagnose_fluxes_surface (config_flags%pbl3d_sfc_opt, u, v, t, rho, dz, qv, ust, hfx, qfx, &
           rmol, q_sq, l_master, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
           turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, &
@@ -1030,12 +1085,12 @@
       real (kind = SOLVER_PREC), dimension(:), intent(inout) :: b(:)
 
       b = 0.0
-      b(1) = Real (q ** 3.0 / (6.0 * a1 * l) + 3.0 * c1 * q_sq * u_x, kind = SOLVER_PREC)
-      b(2) = Real (q ** 3.0 / (6.0 * a1 * l) + 3.0 * c1 * q_sq * v_y, kind = SOLVER_PREC)
-      b(3) = Real (q ** 3.0 / (6.0 * a1 * l) + 3.0 * c1 * q_sq * w_z, kind = SOLVER_PREC)
-      b(4) = Real (c1 * q_sq * (v_x + u_y), kind = SOLVER_PREC)
-      b(5) = Real (c1 * q_sq * (w_x + u_z), kind = SOLVER_PREC)
-      b(6) = Real (c1 * q_sq * (w_y + v_z), kind = SOLVER_PREC)
+      b(1) = Real (q ** 3.0 / (6.0 * a_1 * l) + 3.0 * c_1 * q_sq * u_x, kind = SOLVER_PREC)
+      b(2) = Real (q ** 3.0 / (6.0 * a_1 * l) + 3.0 * c_1 * q_sq * v_y, kind = SOLVER_PREC)
+      b(3) = Real (q ** 3.0 / (6.0 * a_1 * l) + 3.0 * c_1 * q_sq * w_z, kind = SOLVER_PREC)
+      b(4) = Real (c_1 * q_sq * (v_x + u_y), kind = SOLVER_PREC)
+      b(5) = Real (c_1 * q_sq * (w_x + u_z), kind = SOLVER_PREC)
+      b(6) = Real (c_1 * q_sq * (w_y + v_z), kind = SOLVER_PREC)
 
     end subroutine Fill_in_b_vector
 
@@ -1082,7 +1137,7 @@
       a = 0.0
 
          ! u2 equation
-      a(1, 1) = Real (q / (2.0 * a1 * l) + 2.0 * u_x, kind = SOLVER_PREC)
+      a(1, 1) = Real (q / (2.0 * a_1 * l) + 2.0 * u_x, kind = SOLVER_PREC)
       a(1, 2) = Real (- v_y, kind = SOLVER_PREC)
       a(1, 3) = Real (- w_z, kind = SOLVER_PREC)
       a(1, 4) = Real (2.0 * u_y - v_x, kind = SOLVER_PREC)
@@ -1092,7 +1147,7 @@
 
          ! v2 equation
       a(2, 1) = Real (- u_x, kind = SOLVER_PREC)
-      a(2, 2) = Real (q / (2.0 * a1 * l) + 2.0 * v_y, kind = SOLVER_PREC)
+      a(2, 2) = Real (q / (2.0 * a_1 * l) + 2.0 * v_y, kind = SOLVER_PREC)
       a(2, 3) = Real (- w_z, kind = SOLVER_PREC)
       a(2, 4) = Real (2.0 * v_x - u_y, kind = SOLVER_PREC)
       a(2, 5) = Real (- u_z - w_x, kind = SOLVER_PREC)
@@ -1102,7 +1157,7 @@
          ! w2 equation
       a(3, 1) = Real (- u_x, kind = SOLVER_PREC)
       a(3, 2) = Real (- v_y, kind = SOLVER_PREC)
-      a(3, 3) = Real (q / (2.0 * a1 * l) + 2.0 * w_z, kind = SOLVER_PREC)
+      a(3, 3) = Real (q / (2.0 * a_1 * l) + 2.0 * w_z, kind = SOLVER_PREC)
       a(3, 4) = Real (- u_y - v_x, kind = SOLVER_PREC)
       a(3, 5) = Real (2.0 * w_x - u_z, kind = SOLVER_PREC)
       a(3, 6) = Real (2.0 * w_y - v_z, kind = SOLVER_PREC)
@@ -1111,7 +1166,7 @@
          ! uv equation
       a(4, 1) = Real (v_x, kind = SOLVER_PREC)
       a(4, 2) = Real (u_y, kind = SOLVER_PREC)
-      a(4, 4) = Real (q / (3.0 * a1 * l) + u_x + v_y, kind = SOLVER_PREC)
+      a(4, 4) = Real (q / (3.0 * a_1 * l) + u_x + v_y, kind = SOLVER_PREC)
       a(4, 5) = Real (v_z, kind = SOLVER_PREC)
       a(4, 6) = Real (u_z, kind = SOLVER_PREC)
 
@@ -1119,7 +1174,7 @@
       a(5, 1) = Real (w_x, kind = SOLVER_PREC)
       a(5, 3) = Real (u_z, kind = SOLVER_PREC)
       a(5, 4) = Real (w_y, kind = SOLVER_PREC)
-      a(5, 5) = Real (q / (3.0 * a1 * l) + w_z + u_x, kind = SOLVER_PREC)
+      a(5, 5) = Real (q / (3.0 * a_1 * l) + w_z + u_x, kind = SOLVER_PREC)
       a(5, 6) = Real (u_y, kind = SOLVER_PREC)
       a(5, 7) = Real (- G_OVER_TREF, kind = SOLVER_PREC)
 
@@ -1128,14 +1183,14 @@
       a(6, 3) = Real (v_z, kind = SOLVER_PREC)
       a(6, 4) = Real (w_x, kind = SOLVER_PREC)
       a(6, 5) = Real (v_x, kind = SOLVER_PREC)
-      a(6, 6) = Real (q / (3.0 * a1 * l) + w_z + v_y, kind = SOLVER_PREC)
+      a(6, 6) = Real (q / (3.0 * a_1 * l) + w_z + v_y, kind = SOLVER_PREC)
       a(6, 8) = Real (- G_OVER_TREF, kind = SOLVER_PREC)
 
          ! ut_v equation
       a(7, 1) = Real (tv_x, kind = SOLVER_PREC)
       a(7, 4) = Real (tv_y, kind = SOLVER_PREC)
       a(7, 5) = Real (tv_z, kind = SOLVER_PREC)
-      a(7, 7) = Real (q / (3.0 * a2 * l) + u_x, kind = SOLVER_PREC)
+      a(7, 7) = Real (q / (3.0 * a_2 * l) + u_x, kind = SOLVER_PREC)
       a(7, 8) = Real (u_y, kind = SOLVER_PREC)
       a(7, 9) = Real (u_z, kind = SOLVER_PREC)
 
@@ -1144,7 +1199,7 @@
       a(8, 4) = Real (tv_x, kind = SOLVER_PREC)
       a(8, 6) = Real (tv_z, kind = SOLVER_PREC)
       a(8, 7) = Real (v_x, kind = SOLVER_PREC)
-      a(8, 8) = Real (q / (3.0 * a2 * l) + v_y, kind = SOLVER_PREC)
+      a(8, 8) = Real (q / (3.0 * a_2 * l) + v_y, kind = SOLVER_PREC)
       a(8, 9) = Real (v_z, kind = SOLVER_PREC)
 
          ! wt_v equation
@@ -1153,14 +1208,14 @@
       a(9, 6) = Real (tv_y, kind = SOLVER_PREC)
       a(9, 7) = Real (w_x, kind = SOLVER_PREC)
       a(9, 8) = Real (w_y, kind = SOLVER_PREC)
-      a(9, 9) = Real (q / (3.0 * a2 * l) + w_z, kind = SOLVER_PREC)
+      a(9, 9) = Real (q / (3.0 * a_2 * l) + w_z, kind = SOLVER_PREC)
       a(9, 10) = Real (- G_OVER_TREF, kind = SOLVER_PREC)
 
          ! tt_v equation
       a(10, 7) = Real (tv_x, kind = SOLVER_PREC)
       a(10, 8) = Real (tv_y, kind = SOLVER_PREC)
       a(10, 9) = Real (tv_z, kind = SOLVER_PREC)
-      a(10, 10) = Real (q / (b2 * l), kind = SOLVER_PREC)
+      a(10, 10) = Real (q / (b_2 * l), kind = SOLVER_PREC)
 
     end subroutine Fill_in_a_matrix
 
@@ -1175,28 +1230,28 @@
       real (kind = SOLVER_PREC), intent (in) :: u_x, u_y, u_z, v_x, v_y, v_z, w_x, &
           w_y, w_z, tv_x, tv_y, tv_z
 
-      a(1, 1) = Real (q / (3.0 * a2 * l) + u_x, kind = SOLVER_PREC)
+      a(1, 1) = Real (q / (3.0 * a_2 * l) + u_x, kind = SOLVER_PREC)
       a(1, 2) = Real (u_y, kind = SOLVER_PREC)
       a(1, 3) = Real (u_z, kind = SOLVER_PREC)
       a(1, 4) = 0.0
 
         ! vr equation
       a(2, 1) = Real (v_x, kind = SOLVER_PREC)
-      a(2, 2) = Real (q / (3.0 * a2 * l) + v_y, kind = SOLVER_PREC)
+      a(2, 2) = Real (q / (3.0 * a_2 * l) + v_y, kind = SOLVER_PREC)
       a(2, 3) = Real (v_z, kind = SOLVER_PREC)
       a(2, 4) = 0.0
 
         ! wr equation
       a(3, 1) = Real (w_x, kind = SOLVER_PREC)
       a(3, 2) = Real (w_y, kind = SOLVER_PREC)
-      a(3, 3) = Real (q / (3.0 * a2 * l) + w_z, kind = SOLVER_PREC)
+      a(3, 3) = Real (q / (3.0 * a_2 * l) + w_z, kind = SOLVER_PREC)
       a(3, 4) = Real (-G_OVER_TREF, kind = SOLVER_PREC)
 
         ! wr equation
       a(4, 1) = Real (tv_x, kind = SOLVER_PREC)
       a(4, 2) = Real (tv_y, kind = SOLVER_PREC)
       a(4, 3) = Real (tv_z, kind = SOLVER_PREC)
-      a(4, 4) = Real (2.0 * q / (b2 * l), kind = SOLVER_PREC)
+      a(4, 4) = Real (2.0 * q / (b_2 * l), kind = SOLVER_PREC)
 
     end subroutine Fill_in_a_matrix_moist
 
@@ -1243,23 +1298,29 @@
     end subroutine Calc_heat_flux
 
 
-    subroutine Diagnose_fluxes_pbl_approx (fnm, fnp, u, v, t, thetav, rho, qv, ust, hfx, qfx, &
-              sm_tilde, sh_tilde, sm_l2, sh_l2, rif, q_sq, q_sq_hl88, q_ratio, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+    subroutine Diagnose_fluxes_pbl_approx (do_scalar_mix, ss, nsteps, fnm, fnp, t, qv, ust, hfx, qfx, sm_tilde, sh_tilde, &
+              sm_l2, sh_l2, rif, q_sq, q_sq_hl88, q_ratio, l_master, du_dz, dv_dz, dthetav_dz, dqv_dz, dqc_dz, &
+              dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, &
               u2, v2, w2, uv, uw, vw, uthv, vthv, wthv, th2v, uqv, vqv, wqv, uth, vth, wth, &
+              uqc, vqc, wqc, uqr, vqr, wqr, uqi, vqi, wqi, uqs, vqs, wqs, uqg, vqg, wqg, uqnc, vqnc, wqnc, &
+              uqnr, vqnr, wqnr, uqni, vqni, wqni, uqnwfa, vqnwfa, wqnwfa, uqnifa, vqnifa, wqnifa, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       implicit none
 
+      integer, intent (in)                                        :: do_scalar_mix, ss, nsteps
       real, dimension (kms:kme),                   intent (in)    :: fnm, fnp
-      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz, &
+          dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: t, qv
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: u2, v2, w2, &
-          uv, uw, vw, uthv, vthv, wthv, th2v, uqv, vqv, wqv, uth, vth, wth
+          uv, uw, vw, uthv, vthv, wthv, th2v, uqv, vqv, wqv, uth, vth, wth, &
+          uqc, vqc, wqc, uqr, vqr, wqr, uqi, vqi, wqi, uqs, vqs, wqs, uqg, vqg, wqg, &
+          uqnc, vqnc, wqnc, uqnr, vqnr, wqnr, uqni, vqni, wqni, uqnwfa, vqnwfa, wqnwfa, uqnifa, vqnifa, wqnifa
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)  :: sm_tilde, sh_tilde, rif
       real, dimension (its:ite, kts:kte, jts:jte), optional, intent (in)  :: q_ratio, q_sq_hl88, sm_l2, sh_l2
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: u, v, thetav, rho
       real, dimension (ims:ime, jms:jme),          intent (in)  :: ust, hfx, qfx
       integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
                                  ims, ime, jms, jme, kms, kme, &
@@ -1267,7 +1328,8 @@
 
         ! local vars
       integer :: i, j, k, i_start, i_end, j_start, j_end, ktf
-      real :: qsq, l, sm, sh, ri, dudz, dvdz, dthvdz, dqvdz
+      real :: qsq, l, sm, sh, ri, dudz, dvdz, dthvdz, dqvdz, dqcdz, dqrdz, dqidz, dqsdz, dqgdz, &
+              dqncdz, dqnrdz, dqnidz, dqnwfadz, dqnifadz
       real :: t_wall, qv_wall
       real :: dxm, dym, tmpzx, tmpzy, sf_alpha
       real :: c_p, u1, v1, wind_speed, ust_sq
@@ -1345,6 +1407,160 @@
               vth(i, k, j) = Diag_xth_pbl_approx (t_wall, qv_wall, vthv(i, k, j), vqv(i, k, j))
               wth(i, k, j) = Diag_xth_pbl_approx (t_wall, qv_wall, wthv(i, k, j), wqv(i, k, j))
 
+              if ( do_scalar_mix .eq. 1 .and. ss .eq. nsteps) then
+                  ! Cloud mass
+                if ( p_qc .ge. param_first_scalar ) then
+                  dqcdz = dqc_dz(i, k, j)
+                  wqc(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqcdz)
+                  uqc(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqcdz, uw(i, k, j), wqc(i, k, j))
+                  vqc(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqcdz, vw(i, k, j), wqc(i, k, j))
+                else
+                  wqc(i, k, j) = TURB_FLUX_MIN
+                  uqc(i, k, j) = TURB_FLUX_MIN
+                  vqc(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Rain mass
+                if ( p_qr .ge. param_first_scalar ) then
+                  dqrdz = dqr_dz(i, k, j)
+                  wqr(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqrdz)
+                  uqr(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqrdz, uw(i, k, j), wqr(i, k, j))
+                  vqr(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqrdz, vw(i, k, j), wqr(i, k, j))
+                else
+                  wqr(i, k, j) = TURB_FLUX_MIN
+                  uqr(i, k, j) = TURB_FLUX_MIN
+                  vqr(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Ice mass
+                if ( p_qi .ge. param_first_scalar ) then
+                  dqidz = dqi_dz(i, k, j)
+                  wqi(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqidz)
+                  uqi(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqidz, uw(i, k, j), wqi(i, k, j))
+                  vqi(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqidz, vw(i, k, j), wqi(i, k, j))
+                else
+                  wqi(i, k, j) = TURB_FLUX_MIN
+                  uqi(i, k, j) = TURB_FLUX_MIN
+                  vqi(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Snow mass
+                if ( p_qs .ge. param_first_scalar ) then
+                  dqsdz = dqs_dz(i, k, j)
+                  wqs(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqsdz)
+                  uqs(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqsdz, uw(i, k, j), wqs(i, k, j))
+                  vqs(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqsdz, vw(i, k, j), wqs(i, k, j))
+                else
+                  wqs(i, k, j) = TURB_FLUX_MIN
+                  uqs(i, k, j) = TURB_FLUX_MIN
+                  vqs(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Graupel mass
+                if ( p_qg .ge. param_first_scalar ) then
+                  dqgdz = dqg_dz(i, k, j)
+                  wqg(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqgdz)
+                  uqg(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqgdz, uw(i, k, j), wqg(i, k, j))
+                  vqg(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqgdz, vw(i, k, j), wqg(i, k, j))
+                else
+                  wqg(i, k, j) = TURB_FLUX_MIN
+                  uqg(i, k, j) = TURB_FLUX_MIN
+                  vqg(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Cloud number
+                if ( p_qnc .ge. param_first_scalar ) then
+                  dqncdz = dqnc_dz(i, k, j)
+                  wqnc(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqncdz)
+                  uqnc(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqncdz, uw(i, k, j), wqnc(i, k, j))
+                  vqnc(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqncdz, vw(i, k, j), wqnc(i, k, j))
+                else
+                  wqnc(i, k, j) = TURB_FLUX_MIN
+                  uqnc(i, k, j) = TURB_FLUX_MIN
+                  vqnc(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Rain number
+                if ( p_qnr .ge. param_first_scalar ) then
+                  dqnrdz = dqnr_dz(i, k, j)
+                  wqnr(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqnrdz)
+                  uqnr(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqnrdz, uw(i, k, j), wqnr(i, k, j))
+                  vqnr(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqnrdz, vw(i, k, j), wqnr(i, k, j))
+                else
+                  wqnr(i, k, j) = TURB_FLUX_MIN
+                  uqnr(i, k, j) = TURB_FLUX_MIN
+                  vqnr(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Ice number
+                if ( p_qni .ge. param_first_scalar ) then
+                  dqnidz = dqni_dz(i, k, j)
+                  wqni(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqnidz)
+                  uqni(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqnidz, uw(i, k, j), wqni(i, k, j))
+                  vqni(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqnidz, vw(i, k, j), wqni(i, k, j))
+                else
+                  wqni(i, k, j) = TURB_FLUX_MIN
+                  uqni(i, k, j) = TURB_FLUX_MIN
+                  vqni(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Water friendly aerosol number
+                if ( p_qnwfa .ge. param_first_scalar ) then
+                  dqnwfadz = dqnwfa_dz(i, k, j)
+                  wqnwfa(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqnwfadz)
+                  uqnwfa(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqnwfadz, uw(i, k, j), wqnwfa(i, k, j))
+                  vqnwfa(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqnwfadz, vw(i, k, j), wqnwfa(i, k, j))
+                else
+                  wqnwfa(i, k, j) = TURB_FLUX_MIN
+                  uqnwfa(i, k, j) = TURB_FLUX_MIN
+                  vqnwfa(i, k, j) = TURB_FLUX_MIN
+                end if
+                  ! Ice friendly aerosol number
+                if ( p_qnifa .ge. param_first_scalar ) then
+                  dqnifadz = dqnifa_dz(i, k, j)
+                  wqnifa(i, k, j) = Diag_wqv_pbl_approx (qsq, l, sh, dqnifadz)
+                  uqnifa(i, k, j) = Diag_uqv_pbl_approx (qsq, l, dudz, dqnifadz, uw(i, k, j), wqnifa(i, k, j))
+                  vqnifa(i, k, j) = Diag_vqv_pbl_approx (qsq, l, dvdz, dqnifadz, vw(i, k, j), wqnifa(i, k, j))
+                else
+                  wqnifa(i, k, j) = TURB_FLUX_MIN
+                  uqnifa(i, k, j) = TURB_FLUX_MIN
+                  vqnifa(i, k, j) = TURB_FLUX_MIN
+                end if
+              else
+                  ! Cloud mas
+                wqc(i, k, j) = TURB_FLUX_MIN
+                uqc(i, k, j) = TURB_FLUX_MIN
+                vqc(i, k, j) = TURB_FLUX_MIN
+                  ! Rain mass
+                wqr(i, k, j) = TURB_FLUX_MIN
+                uqr(i, k, j) = TURB_FLUX_MIN
+                vqr(i, k, j) = TURB_FLUX_MIN
+                  ! Ice mass
+                wqi(i, k, j) = TURB_FLUX_MIN
+                uqi(i, k, j) = TURB_FLUX_MIN
+                vqi(i, k, j) = TURB_FLUX_MIN
+                  ! Snow mass
+                wqs(i, k, j) = TURB_FLUX_MIN
+                uqs(i, k, j) = TURB_FLUX_MIN
+                vqs(i, k, j) = TURB_FLUX_MIN
+                  ! Graupel mass
+                wqg(i, k, j) = TURB_FLUX_MIN
+                uqg(i, k, j) = TURB_FLUX_MIN
+                vqg(i, k, j) = TURB_FLUX_MIN
+                  ! Cloud number
+                wqnc(i, k, j) = TURB_FLUX_MIN
+                uqnc(i, k, j) = TURB_FLUX_MIN
+                vqnc(i, k, j) = TURB_FLUX_MIN
+                  ! Rain number
+                wqnr(i, k, j) = TURB_FLUX_MIN
+                uqnr(i, k, j) = TURB_FLUX_MIN
+                vqnr(i, k, j) = TURB_FLUX_MIN
+                  ! Ice number
+                wqni(i, k, j) = TURB_FLUX_MIN
+                uqni(i, k, j) = TURB_FLUX_MIN
+                vqni(i, k, j) = TURB_FLUX_MIN
+                  ! Water friendly aerosol number
+                wqnwfa(i, k, j) = TURB_FLUX_MIN
+                uqnwfa(i, k, j) = TURB_FLUX_MIN
+                vqnwfa(i, k, j) = TURB_FLUX_MIN
+                  ! Ice friendly aerosol number
+                wqnifa(i, k, j) = TURB_FLUX_MIN
+                uqnifa(i, k, j) = TURB_FLUX_MIN
+                vqnifa(i, k, j) = TURB_FLUX_MIN
+              end if
+
                 ! Apply HL88 mod for level 2.5 model
               if ( PRESENT(q_ratio) ) then
                 if ( q_ratio(i, k, j) <= 1.0 ) then
@@ -1366,6 +1582,69 @@
                   uqv(i, k, j) = uqv(i, k, j) * q_ratio(i, k, j) ** 2.0
                   vqv(i, k, j) = vqv(i, k, j) * q_ratio(i, k, j) ** 2.0
                   wqv(i, k, j) = wqv(i, k, j) * q_ratio(i, k, j) ** 2.0
+
+                  if ( do_scalar_mix .eq. 1 .and. ss .eq. nsteps) then
+                      ! Cloud mass
+                    if ( p_qc .ge. param_first_scalar ) then
+                      uqc(i, k, j) = uqc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqc(i, k, j) = vqc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqc(i, k, j) = wqc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Rain mass
+                    if ( p_qr .ge. param_first_scalar ) then
+                      uqr(i, k, j) = uqr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqr(i, k, j) = vqr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqr(i, k, j) = wqr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Ice mass
+                    if ( p_qi .ge. param_first_scalar ) then
+                      uqi(i, k, j) = uqi(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqi(i, k, j) = vqi(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqi(i, k, j) = wqi(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Snow mass
+                    if ( p_qs .ge. param_first_scalar ) then
+                      uqs(i, k, j) = uqs(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqs(i, k, j) = vqs(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqs(i, k, j) = wqs(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Graupel mass
+                    if ( p_qg .ge. param_first_scalar ) then
+                      uqg(i, k, j) = uqg(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqg(i, k, j) = vqg(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqg(i, k, j) = wqg(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Cloud number
+                    if ( p_qnc .ge. param_first_scalar ) then
+                      uqnc(i, k, j) = uqnc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqnc(i, k, j) = vqnc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqnc(i, k, j) = wqnc(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Rain number
+                    if ( p_qnr .ge. param_first_scalar ) then
+                      uqnr(i, k, j) = uqnr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqnr(i, k, j) = vqnr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqnr(i, k, j) = wqnr(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Ice number
+                    if ( p_qni .ge. param_first_scalar ) then
+                      uqni(i, k, j) = uqni(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqni(i, k, j) = vqni(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqni(i, k, j) = wqni(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Water friendly aerosol number
+                    if ( p_qnwfa .ge. param_first_scalar ) then
+                      uqnwfa(i, k, j) = uqnwfa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqnwfa(i, k, j) = vqnwfa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqnwfa(i, k, j) = wqnwfa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                      ! Ice friendly aerosol number
+                    if ( p_qnifa .ge. param_first_scalar ) then
+                      uqnifa(i, k, j) = uqnifa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      vqnifa(i, k, j) = vqnifa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                      wqnifa(i, k, j) = wqnifa(i, k, j) * q_ratio(i, k, j) ** 2.0
+                    end if
+                  end if
                 end if
               end if
 
@@ -1432,6 +1711,36 @@
           uqv(i, k, j) = TURB_FLUX_MIN
           vqv(i, k, j) = TURB_FLUX_MIN
           wqv(i, k, j) = TURB_FLUX_MIN
+          uqc(i, k, j) = TURB_FLUX_MIN
+          vqc(i, k, j) = TURB_FLUX_MIN
+          wqc(i, k, j) = TURB_FLUX_MIN
+          uqr(i, k, j) = TURB_FLUX_MIN
+          vqr(i, k, j) = TURB_FLUX_MIN
+          wqr(i, k, j) = TURB_FLUX_MIN
+          uqi(i, k, j) = TURB_FLUX_MIN
+          vqi(i, k, j) = TURB_FLUX_MIN
+          wqi(i, k, j) = TURB_FLUX_MIN
+          uqs(i, k, j) = TURB_FLUX_MIN
+          vqs(i, k, j) = TURB_FLUX_MIN
+          wqs(i, k, j) = TURB_FLUX_MIN
+          uqg(i, k, j) = TURB_FLUX_MIN
+          vqg(i, k, j) = TURB_FLUX_MIN
+          wqg(i, k, j) = TURB_FLUX_MIN
+          uqnc(i, k, j) = TURB_FLUX_MIN
+          vqnc(i, k, j) = TURB_FLUX_MIN
+          wqnc(i, k, j) = TURB_FLUX_MIN
+          uqnr(i, k, j) = TURB_FLUX_MIN
+          vqnr(i, k, j) = TURB_FLUX_MIN
+          wqnr(i, k, j) = TURB_FLUX_MIN
+          uqni(i, k, j) = TURB_FLUX_MIN
+          vqni(i, k, j) = TURB_FLUX_MIN
+          wqni(i, k, j) = TURB_FLUX_MIN
+          uqnwfa(i, k, j) = TURB_FLUX_MIN
+          vqnwfa(i, k, j) = TURB_FLUX_MIN
+          wqnwfa(i, k, j) = TURB_FLUX_MIN
+          uqnifa(i, k, j) = TURB_FLUX_MIN
+          vqnifa(i, k, j) = TURB_FLUX_MIN
+          wqnifa(i, k, j) = TURB_FLUX_MIN
           uth(i, k, j) = TURB_FLUX_MIN
           uthv(i, k, j) = TURB_FLUX_MIN
           vth(i, k, j) = TURB_FLUX_MIN
@@ -1456,6 +1765,36 @@
               uqv(i, kts, j) = TURB_FLUX_MIN
               vqv(i, kts, j) = TURB_FLUX_MIN
               wqv(i, kts, j) = TURB_FLUX_MIN
+              uqc(i, kts, j) = TURB_FLUX_MIN
+              vqc(i, kts, j) = TURB_FLUX_MIN
+              wqc(i, kts, j) = TURB_FLUX_MIN
+              uqr(i, kts, j) = TURB_FLUX_MIN
+              vqr(i, kts, j) = TURB_FLUX_MIN
+              wqr(i, kts, j) = TURB_FLUX_MIN
+              uqi(i, kts, j) = TURB_FLUX_MIN
+              vqi(i, kts, j) = TURB_FLUX_MIN
+              wqi(i, kts, j) = TURB_FLUX_MIN
+              uqs(i, kts, j) = TURB_FLUX_MIN
+              vqs(i, kts, j) = TURB_FLUX_MIN
+              wqs(i, kts, j) = TURB_FLUX_MIN
+              uqg(i, kts, j) = TURB_FLUX_MIN
+              vqg(i, kts, j) = TURB_FLUX_MIN
+              wqg(i, kts, j) = TURB_FLUX_MIN
+              uqnc(i, kts, j) = TURB_FLUX_MIN
+              vqnc(i, kts, j) = TURB_FLUX_MIN
+              wqnc(i, kts, j) = TURB_FLUX_MIN
+              uqnr(i, kts, j) = TURB_FLUX_MIN
+              vqnr(i, kts, j) = TURB_FLUX_MIN
+              wqnr(i, kts, j) = TURB_FLUX_MIN
+              uqni(i, kts, j) = TURB_FLUX_MIN
+              vqni(i, kts, j) = TURB_FLUX_MIN
+              wqni(i, kts, j) = TURB_FLUX_MIN
+              uqnwfa(i, kts, j) = TURB_FLUX_MIN
+              vqnwfa(i, kts, j) = TURB_FLUX_MIN
+              wqnwfa(i, kts, j) = TURB_FLUX_MIN
+              uqnifa(i, kts, j) = TURB_FLUX_MIN
+              vqnifa(i, kts, j) = TURB_FLUX_MIN
+              wqnifa(i, kts, j) = TURB_FLUX_MIN
               uth(i, kts, j) = TURB_FLUX_MIN
               uthv(i, kts, j) = TURB_FLUX_MIN
               vth(i, kts, j) = TURB_FLUX_MIN
@@ -1481,6 +1820,36 @@
               uqv(i, ktf + 1, j) = TURB_FLUX_MIN
               vqv(i, ktf + 1, j) = TURB_FLUX_MIN
               wqv(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqc(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqc(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqc(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqr(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqr(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqr(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqi(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqi(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqi(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqs(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqs(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqs(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqg(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqg(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqg(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqnc(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqnc(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqnc(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqnr(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqnr(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqnr(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqni(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqni(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqni(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqnwfa(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqnwfa(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqnwfa(i, ktf + 1, j) = TURB_FLUX_MIN
+              uqnifa(i, ktf + 1, j) = TURB_FLUX_MIN
+              vqnifa(i, ktf + 1, j) = TURB_FLUX_MIN
+              wqnifa(i, ktf + 1, j) = TURB_FLUX_MIN
               uth(i, ktf + 1, j) = TURB_FLUX_MIN
               uthv(i, ktf + 1, j) = TURB_FLUX_MIN
               vth(i, ktf + 1, j) = TURB_FLUX_MIN
@@ -1496,7 +1865,7 @@
     end subroutine Diagnose_fluxes_pbl_approx
 
 
-    subroutine Diagnose_fluxes_surface (pbl3d_sfc_opt, u, v, t, thetav, rho, dz, qv, ust, hfx, qfx, rmol, &
+    subroutine Diagnose_fluxes_surface (pbl3d_sfc_opt, u, v, t, rho, dz, qv, ust, hfx, qfx, rmol, &
               q_sq, l_master, u2, v2, w2, uv, uw, vw, uthv, vthv, wthv, th2v, uqv, vqv, wqv, uth, vth, wth, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
@@ -1518,7 +1887,7 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: t, qv
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: u2, v2, w2, &
           uv, uw, vw, uthv, vthv, wthv, th2v, uqv, vqv, wqv, uth, vth, wth
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: u, v, thetav, rho, dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: u, v, rho, dz
       real, dimension (ims:ime, jms:jme),          intent (in)  :: ust, hfx, qfx, rmol
       integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
                                  ims, ime, jms, jme, kms, kme, &
@@ -1567,8 +1936,8 @@
         ! Calculate additional surface turbulent fluxes
       if (pbl3d_sfc_opt > 0) then
          ! Prandtl number
-        gamma1 = 1.0 / 3.0 - 2.0 * (a1 / b1)
-        prt = a1 * (gamma1 - c1) /  (a2 * gamma1)
+        gamma1 = 1.0 / 3.0 - 2.0 * (a_1 / b_1)
+        prt = a_1 * (gamma1 - c_1) /  (a_2 * gamma1)
         do j = j_start, j_end
           do i = i_start, i_end
             if (pbl3d_sfc_opt == 1) then
@@ -1613,33 +1982,33 @@
 
              ! Following equations derived from MY74
              ! Eq. 46
-            qss = Max(Q_SQ_MIN, (b1 * elv * pmz1) ** (2.0 / 3.0) * ust_sq(i, j))
+            qss = Max(Q_SQ_MIN, (b_1 * elv * pmz1) ** (2.0 / 3.0) * ust_sq(i, j))
             q_sq(i, kts, j) = qss
 
              ! Other momentum Eq. 47a, b, c, d
-            u2(i, kts, j) = qss * (1.0 / 3.0 + (a1 / b1) * &
+            u2(i, kts, j) = qss * (1.0 / 3.0 + (a_1 / b_1) * &
                 (4.0 * cosa(i, j) * cosa(i, j) * pmz2 - 2.0 * sina(i, j) * sina(i, j) * pmz2 + 2.0 * zet) / pmz1)
-            v2(i, kts, j) = qss * (1.0 / 3.0 + (a1 / b1) * &
+            v2(i, kts, j) = qss * (1.0 / 3.0 + (a_1 / b_1) * &
                 (-2.0 * cosa(i, j) * cosa(i, j) * pmz2 + 4.0 * sina(i, j) * sina(i, j) * pmz2 + 2.0 * zet) / pmz1)
-            w2(i, kts, j) = qss * (1.0 / 3.0 + (a1 / b1) * &
+            w2(i, kts, j) = qss * (1.0 / 3.0 + (a_1 / b_1) * &
                 (-2.0 * pmz2 - 4.0 * zet) / pmz1)
-            uv(i, kts, j) = qss * (a1 / b1) * (6.0 * sina(i, j) * cosa(i, j) * pmz2) / pmz1
+            uv(i, kts, j) = qss * (a_1 / b_1) * (6.0 * sina(i, j) * cosa(i, j) * pmz2) / pmz1
 
              ! Heat flux Eq. 48a, b
-            uth(i, kts, j) = - wth(i, kts, j) * (3.0 * a2 / b1 ** (1.0 / 3.0)) * &
+            uth(i, kts, j) = - wth(i, kts, j) * (3.0 * a_2 / b_1 ** (1.0 / 3.0)) * &
                 (elv ** (2.0 / 3.0)) * (phz + pmz2) / pmz1 ** (1.0 / 3.0) * cosa(i, j)
-            vth(i, kts, j) = - wth(i, kts, j) * (3.0 * a2 / b1 ** (1.0 / 3.0)) * &
+            vth(i, kts, j) = - wth(i, kts, j) * (3.0 * a_2 / b_1 ** (1.0 / 3.0)) * &
                 (elv ** (2.0 / 3.0)) * (phz + pmz2) / pmz1 ** (1.0 / 3.0) * sina(i, j)
 
              ! Moisture Eq. 48a, b
-            uqv(i, kts, j) = - wqv(i, kts, j) * (3.0 * a2 / b1 ** (1.0 / 3.0)) * &
+            uqv(i, kts, j) = - wqv(i, kts, j) * (3.0 * a_2 / b_1 ** (1.0 / 3.0)) * &
                 (elv ** (2.0 / 3.0)) * (phz + pmz2) / pmz1 ** (1.0 / 3.0) * cosa(i, j)
-            vqv(i, kts, j) = - wqv(i, kts, j) * (3.0 * a2 / b1 ** (1.0 / 3.0)) * &
+            vqv(i, kts, j) = - wqv(i, kts, j) * (3.0 * a_2 / b_1 ** (1.0 / 3.0)) * &
                 (elv ** (2.0 / 3.0)) * (phz + pmz2) / pmz1 ** (1.0 / 3.0) * sina(i, j)
 
              ! Heat variance Eq. 49
             th2v(i, kts, j) = wth(i, kts, j) ** 2.0 / MAX(ust_sq(i, j), 0.001) * (elv ** (2.0 / 3.0)) * &
-                (b2 / b1 ** (1.0 / 3.0)) * phz / pmz1 ** (1.0 / 3.0)
+                (b_2 / b_1 ** (1.0 / 3.0)) * phz / pmz1 ** (1.0 / 3.0)
           end do
         end do
       end if
@@ -1678,7 +2047,7 @@
       real, intent(in) :: q_sq, l_master, du_dz, dv_dz, tf_uw, tf_vw
       real             :: diag_uv_pbl_approx
 
-      diag_uv_pbl_approx = 3.0 * a1 * l_master / Sqrt (q_sq) * (- tf_uw * dv_dz - tf_vw * du_dz)
+      diag_uv_pbl_approx = 3.0 * a_1 * l_master / Sqrt (q_sq) * (- tf_uw * dv_dz - tf_vw * du_dz)
 
     end function Diag_uv_pbl_approx
 
@@ -1690,7 +2059,7 @@
       real, intent(in) :: l_master, sh, sm, dthetav_dz, du_dz
       real             :: diag_uthv_pbl_approx
 
-      diag_uthv_pbl_approx = 3.0 * a2 * l_master ** 2.0 * (sh + sm) * dthetav_dz * du_dz
+      diag_uthv_pbl_approx = 3.0 * a_2 * l_master ** 2.0 * (sh + sm) * dthetav_dz * du_dz
 
     end function Diag_uthv_pbl_approx
 
@@ -1702,7 +2071,7 @@
       real, intent(in) :: l_master, sh, sm, dthetav_dz, dv_dz
       real             :: diag_vthv_pbl_approx
 
-      diag_vthv_pbl_approx = 3.0 * a2 * l_master ** 2.0 * (sh + sm) * dthetav_dz * dv_dz
+      diag_vthv_pbl_approx = 3.0 * a_2 * l_master ** 2.0 * (sh + sm) * dthetav_dz * dv_dz
 
     end function Diag_vthv_pbl_approx
 
@@ -1738,7 +2107,7 @@
       real, intent(in) :: l_master, sh, dthetav_dz
       real             :: diag_th2v_pbl_approx
 
-      diag_th2v_pbl_approx = b2 * l_master ** 2.0 * sh * dthetav_dz ** 2.0
+      diag_th2v_pbl_approx = b_2 * l_master ** 2.0 * sh * dthetav_dz ** 2.0
 
     end function Diag_th2v_pbl_approx
 
@@ -1750,7 +2119,7 @@
       real, intent(in) :: q_sq, l_master, rif, du_dz, dv_dz, tf_uw, tf_vw, tf_wtheta_v
       real             :: diag_u2_pbl_approx
 
-      diag_u2_pbl_approx = q_sq / 3.0 + 2.0 * a1 * l_master / Sqrt (q_sq) *  &
+      diag_u2_pbl_approx = q_sq / 3.0 + 2.0 * a_1 * l_master / Sqrt (q_sq) *  &
           (- 2.0 * tf_uw * du_dz + tf_vw * dv_dz - G_OVER_TREF * tf_wtheta_v)
 
     end function Diag_u2_pbl_approx
@@ -1763,7 +2132,7 @@
       real, intent(in) :: q_sq, l_master, rif, du_dz, dv_dz, tf_uw, tf_vw, tf_wtheta_v
       real             :: diag_v2_pbl_approx
 
-      diag_v2_pbl_approx = q_sq / 3.0 + 2.0 * a1 * l_master / Sqrt (q_sq) *  &
+      diag_v2_pbl_approx = q_sq / 3.0 + 2.0 * a_1 * l_master / Sqrt (q_sq) *  &
           (tf_uw * du_dz - 2.0 * tf_vw * dv_dz - G_OVER_TREF * tf_wtheta_v)
 
     end function Diag_v2_pbl_approx
@@ -1776,7 +2145,7 @@
       real, intent(in) :: q_sq, l_master, rif, du_dz, dv_dz, tf_uw, tf_vw, tf_wtheta_v
       real             :: diag_w2_pbl_approx
 
-      diag_w2_pbl_approx = q_sq / 3.0 + 2.0 * a1 * l_master / Sqrt (q_sq) *  &
+      diag_w2_pbl_approx = q_sq / 3.0 + 2.0 * a_1 * l_master / Sqrt (q_sq) *  &
           (tf_uw * du_dz + tf_vw * dv_dz + 2.0 * G_OVER_TREF * tf_wtheta_v)
 
     end function Diag_w2_pbl_approx
@@ -1789,7 +2158,7 @@
       real, intent(in) :: q_sq, l_master, du_dz, dqv_dz, tf_uw, tf_wqv
       real             :: diag_uqv_pbl_approx
 
-      diag_uqv_pbl_approx = - (3.0 * a2 * l_master / Sqrt (q_sq)) * (tf_uw * dqv_dz + tf_wqv * du_dz)
+      diag_uqv_pbl_approx = - (3.0 * a_2 * l_master / Sqrt (q_sq)) * (tf_uw * dqv_dz + tf_wqv * du_dz)
 
     end function Diag_uqv_pbl_approx
 
@@ -1801,7 +2170,7 @@
       real, intent(in) :: q_sq, l_master, dv_dz, dqv_dz, tf_vw, tf_wqv
       real             :: diag_vqv_pbl_approx
 
-      diag_vqv_pbl_approx = - (3.0 * a2 * l_master / Sqrt (q_sq)) * (tf_vw * dqv_dz + tf_wqv * dv_dz)
+      diag_vqv_pbl_approx = - (3.0 * a_2 * l_master / Sqrt (q_sq)) * (tf_vw * dqv_dz + tf_wqv * dv_dz)
 
     end function Diag_vqv_pbl_approx
 
@@ -1958,20 +2327,20 @@
                   gm = ( (l_master(i, k, j) ** 2.0) / Max (q_sq(i, k, j), Q_SQ_MIN) ) * ( Max( du_dz(i, k, j) ** 2.0 + dv_dz(i, k, j) ** 2.0, 1.0E-10 ) )
 
                     ! Eqs. 2.31, 2.33, 2.35 - 2.41 from HL88
-                  phi1 = 1.0 - 3.0 * a2 * b2 * gh
-                  phi2 = 1.0 - 9.0  * a1 * a2 * gh
-                  phi3 = phi1 + 9.0 * a2 * a2 * gh
-                  phi4 = phi1 - 12.0 * a1 * a2 * gh
-                  phi5 = phi1 - 18.0 * a1 * a2 * gh
-                  N = phi2 + 18.0 * c1 * a1 * a1 * gm
-                  D = phi2 * phi4 + 6.0 * a1 * a1 * phi3 * gm
+                  phi1 = 1.0 - 3.0 * a_2 * b_2 * gh
+                  phi2 = 1.0 - 9.0  * a_1 * a_2 * gh
+                  phi3 = phi1 + 9.0 * a_2 * a_2 * gh
+                  phi4 = phi1 - 12.0 * a_1 * a_2 * gh
+                  phi5 = phi1 - 18.0 * a_1 * a_2 * gh
+                  N = phi2 + 18.0 * c_1 * a_1 * a_1 * gm
+                  D = phi2 * phi4 + 6.0 * a_1 * a_1 * phi3 * gm
 
-                  sm(i, k, j) = a1 * (phi3 - 3.0 * c1 * phi4) / D
-                  sh(i, k, j) = a2 * N / D
+                  sm(i, k, j) = a_1 * (phi3 - 3.0 * c_1 * phi4) / D
+                  sh(i, k, j) = a_2 * N / D
 
                     ! Eqs. 3.17, 3.19, 3.20 from HL88
                   sm(i, k, j) = max ( min ( sm(i, k, j), sqrt ( 0.44 ** 2.0 / gm ) ), 0.0 )
-                  sh(i, k, j) = max ( min ( sh(i, k, j), 0.76 * b2 ), 0.0 )
+                  sh(i, k, j) = max ( min ( sh(i, k, j), 0.76 * b_2 ), 0.0 )
                 end if
 
             end do i_loop_l2p5
@@ -2043,7 +2412,7 @@
 
             if_turb: if (rif(i, k, j) < rif_c) then
 
-              q_sq(i, k, j) =  b1 * l_master(i, k, j) ** 2.0 *        &
+              q_sq(i, k, j) =  b_1 * l_master(i, k, j) ** 2.0 *        &
                   (du_dz(i, k, j) ** 2.0 + dv_dz(i, k, j) ** 2.0) *  &
                   (1.0 - rif(i, k, j)) * sm(i, k, j)
 
@@ -2233,61 +2602,61 @@
 
         case('M73')
 
-          a1 = A1_M73
-          a2 = A2_M73
-          b1 = B1_M73
-          b2 = B2_M73
-          c1 = C1_M73
-          c2 = C2_M73
-          c3 = C3_M73
+          a_1 = A1_M73
+          a_2 = A2_M73
+          b_1 = B1_M73
+          b_2 = B2_M73
+          c_1 = C1_M73
+          c_2 = C2_M73
+          c_3 = C3_M73
           alpha = ALPHA_M73
           lambda = LAMBDA_M73
 
         case('MY74')
 
-          a1 = A1_MY74
-          a2 = A2_MY74
-          b1 = B1_MY74
-          b2 = B2_MY74
-          c1 = C1_MY74
-          c2 = C2_MY74
-          c3 = C3_MY74
+          a_1 = A1_MY74
+          a_2 = A2_MY74
+          b_1 = B1_MY74
+          b_2 = B2_MY74
+          c_1 = C1_MY74
+          c_2 = C2_MY74
+          c_3 = C3_MY74
           alpha = ALPHA_MY74
           lambda = LAMBDA_MY74
 
         case('MY82')
 
-          a1 = A1_MY82
-          a2 = A2_MY82
-          b1 = B1_MY82
-          b2 = B2_MY82
-          c1 = C1_MY82
-          c2 = C2_MY82
-          c3 = C3_MY82
+          a_1 = A1_MY82
+          a_2 = A2_MY82
+          b_1 = B1_MY82
+          b_2 = B2_MY82
+          c_1 = C1_MY82
+          c_2 = C2_MY82
+          c_3 = C3_MY82
           alpha = ALPHA_MY82
           lambda = LAMBDA_MY82
 
         case('MYJ')
 
-          a1 = A1_MYJ
-          a2 = A2_MYJ
-          b1 = B1_MYJ
-          b2 = B2_MYJ
-          c1 = C1_MYJ
-          c2 = C2_MYJ
-          c3 = C3_MYJ
+          a_1 = A1_MYJ
+          a_2 = A2_MYJ
+          b_1 = B1_MYJ
+          b_2 = B2_MYJ
+          c_1 = C1_MYJ
+          c_2 = C2_MYJ
+          c_3 = C3_MYJ
           alpha = ALPHA_MYJ
           lambda = LAMBDA_MYJ
 
         case('Boulac')
 
-          a1 = A1_Boulac
-          a2 = A2_Boulac
-          b1 = B1_Boulac
-          b2 = B2_Boulac
-          c1 = C1_Boulac
-          c2 = C2_Boulac
-          c3 = C3_Boulac
+          a_1 = A1_Boulac
+          a_2 = A2_Boulac
+          b_1 = B1_Boulac
+          b_2 = B2_Boulac
+          c_1 = C1_Boulac
+          c_2 = C2_Boulac
+          c_3 = C3_Boulac
           alpha = ALPHA_Boulac
           lambda = LAMBDA_Boulac
 
@@ -2302,13 +2671,13 @@
       if (DEBUG) then
         write (OUTPUT_UNIT, *) 'Inside subroutine Set_model_constants:'
         write (OUTPUT_UNIT, *) 'Model constants:'
-        write (OUTPUT_UNIT, *) 'a1 = ', a1
-        write (OUTPUT_UNIT, *) 'a2 = ', a2
-        write (OUTPUT_UNIT, *) 'b1 = ', b1
-        write (OUTPUT_UNIT, *) 'b2 = ', b2
-        write (OUTPUT_UNIT, *) 'c1 = ', c1
-        write (OUTPUT_UNIT, *) 'c2 = ', c2
-        write (OUTPUT_UNIT, *) 'c3 = ', c3
+        write (OUTPUT_UNIT, *) 'a1 = ', a_1
+        write (OUTPUT_UNIT, *) 'a2 = ', a_2
+        write (OUTPUT_UNIT, *) 'b1 = ', b_1
+        write (OUTPUT_UNIT, *) 'b2 = ', b_2
+        write (OUTPUT_UNIT, *) 'c1 = ', c_1
+        write (OUTPUT_UNIT, *) 'c2 = ', c_2
+        write (OUTPUT_UNIT, *) 'c3 = ', c_3
         write (OUTPUT_UNIT, *) 'Alpha = ', alpha
         write (OUTPUT_UNIT, *) 'Lambda = ', lambda
       end if
@@ -2337,22 +2706,22 @@
       real              :: e1, e2, e3, e4, e5
 
         ! For the level 2 model (Y75)
-      e1 = b1 - 6.0 * a1
-      e2 = b1 + 12.0 * a1 * (1.0 - c2) + 3.0 * b2 * (1.0 - c3)
-      e3 = b1 * (1.0 - 3.0 * c1) - 6.0 * a1
-      e4 = b1 * (1.0 - 3.0 * c1) + 12.0 * a1 * (1.0 - c2) + 9.0 * a2 * (1.0 - c2)
-      e5 = b1 + 3.0 * a1 * (1.0 - c2) + 3.0 * b2 * (1.0 - c3)
+      e1 = b_1 - 6.0 * a_1
+      e2 = b_1 + 12.0 * a_1 * (1.0 - c_2) + 3.0 * b_2 * (1.0 - c_3)
+      e3 = b_1 * (1.0 - 3.0 * c_1) - 6.0 * a_1
+      e4 = b_1 * (1.0 - 3.0 * c_1) + 12.0 * a_1 * (1.0 - c_2) + 9.0 * a_2 * (1.0 - c_2)
+      e5 = b_1 + 3.0 * a_1 * (1.0 - c_2) + 3.0 * b_2 * (1.0 - c_3)
 
       rif_c = e1 / e2
       rf1   = e3 / e4
       rf2   = e1 / e5
-      cm    = a1 * e2 * e4 / (b1 * e5)
-      ch2   = a2 * e2 / b1
+      cm    = a_1 * e2 * e4 / (b_1 * e5)
+      ch2   = a_2 * e2 / b_1
 
-      fac1 = a2 * e5 / (2.0 * a1 * e4)
-      fac2 = a1 * e3 / (a2 * e5)
-      fac3 = 2.0 * (a1 / a2) * (e3 * e5 - 2.0 * e1 * e4 ) / (e5 * e5)
-      fac4 = (a1 * e3 / (a2 * e5) ) ** 2.0
+      fac1 = a_2 * e5 / (2.0 * a_1 * e4)
+      fac2 = a_1 * e3 / (a_2 * e5)
+      fac3 = 2.0 * (a_1 / a_2) * (e3 * e5 - 2.0 * e1 * e4 ) / (e5 * e5)
+      fac4 = (a_1 * e3 / (a_2 * e5) ) ** 2.0
 
       if (DEBUG) print *, 'Done Set_my_l2_global_vars...'
 
@@ -2398,9 +2767,11 @@
               itf, jtf, ktf, i_start, i_end, j_start, j_end,                    &
               fnm, fnp, dnw, ph, phb,                                           &
               rdzw, z_at_mass, dz,                                              &
-              t_2, qv, thetav, alt, u, v, ust, hfx, qfx, rmol, rho,             &
+              t_2, qv, alt, u, v, ust, hfx, qfx, rmol, rho,                     &
               du_dz, dv_dz, dthetav_dz, dqv_dz,                                 &
-              q_sq, q_sq_prog, l_master, l_master_at_mass,                      &
+              q_sq, q_sq_prog, q_sq_vdiff, q_sq_hdiff, q_sq_shear,              &
+              q_sq_buoyancy, q_sq_dissip,                                       &
+              l_master, l_master_at_mass,                                       &
               turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv,           &
               turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                   &
               turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,       &
@@ -2430,8 +2801,9 @@
       real, dimension(ims:ime, jms:jme),          intent(in)  :: ust, hfx, qfx, rmol
       real, dimension(ims:ime, kms:kme, jms:jme), intent(in)  :: t_2, qv, &
                                                                  u, v, alt, ph, phb
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: thetav, rho
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: q_sq_prog, q_sq
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: rho
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: q_sq_prog, q_sq,     &
+          q_sq_vdiff, q_sq_hdiff, q_sq_shear, q_sq_buoyancy, q_sq_dissip
       real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: l_master, l_master_at_mass, &
           turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv,          &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                  &
@@ -2448,7 +2820,6 @@
       integer :: i, j, k
       integer :: init_iter
       real, dimension (its:ite, kts:kte, jts:jte) :: sm, sh, rif
-      real, dimension (kts:kte) :: sqv
 
       if (DEBUG) then
         write (OUTPUT_UNIT, *) 'Inside subroutine Init_turb_mixing_3d:'
@@ -2466,79 +2837,83 @@
         ! Initializes thetav, TKE, L, and the turbulent fluxes
       j_loop_init: do j = jts, jtf
         i_loop_init: do i = its, itf
-          sqv(kts:ktf) = qv(i, kts:ktf, j) / (1.0 + qv(i, kts:ktf, j))
-          thetav(i, kts:ktf, j) = t_2(i, kts:ktf, j) * (1.0 + P608 * sqv(kts:ktf))
-          q_sq(i, kts:ktf, j) = Q_SQ_MIN
-          l_master(i, kts:ktf, j) = Q_SQ_MIN
+          q_sq(i, kts:kte, j) = Q_SQ_MIN
+          l_master(i, kts:kte, j) = Q_SQ_MIN
           if (pbl3d_prog == 1) then
+            q_sq_prog(i, kts:ktf, j) = Q_SQ_MIN
+            q_sq_vdiff(i, kts:ktf, j) = 0.0
+            q_sq_hdiff(i, kts:ktf, j) = 0.0
+            q_sq_shear(i, kts:ktf, j) = 0.0
+            q_sq_buoyancy(i, kts:ktf, j) = 0.0
+            q_sq_dissip(i, kts:ktf, j) = 0.0
             l_master_at_mass(i, kts:ktf, j) = Q_SQ_MIN
           end if
-          turb_flux_u2(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_v2(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_w2(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_uv(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_uw(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_vw(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_utheta_v(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_vtheta_v(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_wtheta_v(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_theta2_v(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_utheta(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_vtheta(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_wtheta(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_uqv(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_vqv(i, kts:ktf, j) = TURB_FLUX_MIN
-          turb_flux_wqv(i, kts:ktf, j) = TURB_FLUX_MIN
+          turb_flux_u2(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_v2(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_w2(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_uv(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_uw(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_vw(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_utheta_v(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_vtheta_v(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_wtheta_v(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_theta2_v(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_utheta(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_vtheta(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_wtheta(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_uqv(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_vqv(i, kts:kte, j) = TURB_FLUX_MIN
+          turb_flux_wqv(i, kts:kte, j) = TURB_FLUX_MIN
           rho(i, kts:ktf, j) = 1. / alt(i, kts:ktf, j)
         end do i_loop_init
       end do j_loop_init
 
-        ! Calc stability functions
-      call Calc_sm_sh_l2_or_l2p5 (mass_or_face='face', my_level='l2', du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!! FOR NOW, INITIALIZE TO MIN VALS !!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      k = 1
-      do j = j_start, j_end
-        do i = i_start, i_end
-          q_sq(i, k, j) = Max(Q_SQ_MIN, b1 ** (2.0 / 3.0) * ust(i, j) * ust(i, j))
-        end do
-      end do
+!        ! Calc stability functions
+!      call Calc_sm_sh_l2_or_l2p5 (mass_or_face='face', my_level='l2', du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+!          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+!          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
 
-!      do init_iter = 1, 4
-          ! Calc q_sq
-        call Calc_q_sq_l2_pbl_approx (mass_or_face='face', l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
+!      k = 1
+!      do j = j_start, j_end
+!        do i = i_start, i_end
+!          q_sq(i, k, j) = Max(Q_SQ_MIN, b_1 ** (2.0 / 3.0) * ust(i, j) * ust(i, j))
+!        end do
+!      end do
 
-          ! Diagnose master length scale
-        call Calc_l_my_algebra_l2_or_l2p5 (my_level='l2', pbl3d_l_opt=pbl3d_l_opt, q_sq=q_sq, dz=dz, rdzw=rdzw, rmol=rmol, &
-            wthv=turb_flux_wtheta_v, l_master_l2=l_master, dthetav_dz=dthetav_dz, &
-            ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+!      do init_iter = 1, 2
+!          ! Calc q_sq
+!        call Calc_q_sq_l2_pbl_approx (mass_or_face='face', l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+!            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
+!            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
 
-          ! Diagnose momentum, heat, moisture fluxes for pbl approx
-      call Diagnose_fluxes_pbl_approx (fnm=fnm, fnp=fnp, u=u, v=v, t=t_2, thetav=thetav, rho=rho, qv=qv, ust=ust, hfx=hfx, qfx=qfx, &
-          sm_tilde=sm, sh_tilde=sh, rif=rif, q_sq=q_sq, l_master=l_master, &
-          du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, u2=turb_flux_u2, v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, &
-          uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, &
-          uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, uth=turb_flux_utheta, vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, &
-          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+!          ! Diagnose master length scale
+!         call Calc_l_master_algebra (config_flags%pbl3d_l_opt, q_sq, dz, rdzw, rmol, turb_flux_wtheta_v, dthetav_dz, l_master, &
+!             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+!      end do
 
-!        call Diagnose_fluxes_surface (pbl3d_sfc_opt, u, v, t_2, thetav, rho, dz, qv, ust, hfx, qfx, &
+!          ! Diagnose momentum, heat, moisture fluxes for pbl approx
+!      call Diagnose_fluxes_pbl_approx (fnm=fnm, fnp=fnp, t=t_2, qv=qv, ust=ust, hfx=hfx, qfx=qfx, &
+!          sm_tilde=sm, sh_tilde=sh, rif=rif, q_sq=q_sq, l_master=l_master, &
+!          du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, dqv_dz=dqv_dz, u2=turb_flux_u2, v2=turb_flux_v2, w2=turb_flux_w2, uv=turb_flux_uv, &
+!          uw=turb_flux_uw, vw=turb_flux_vw, uthv=turb_flux_utheta_v, vthv=turb_flux_vtheta_v, wthv=turb_flux_wtheta_v, th2v=turb_flux_theta2_v, &
+!          uqv=turb_flux_uqv, vqv=turb_flux_vqv, wqv=turb_flux_wqv, uth=turb_flux_utheta, vth=turb_flux_vtheta, wth=turb_flux_wtheta, ids=ids, ide=ide, &
+!          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
+
+!      call Diagnose_fluxes_surface (pbl3d_sfc_opt, u, v, t_2, rho, dz, qv, ust, hfx, qfx, &
 !          rmol, q_sq, l_master, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
 !          turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, &
 !          turb_flux_theta2_v, turb_flux_uqv, turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, &
 !          turb_flux_wtheta, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-!      end do
 
-      if (pbl3d_prog == 1) then
-        call Fill_q_sq_prog_with_q_sq (q_sq_prog, q_sq, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-          ! Diagnose master length scale at mass points for prognostic TKE
-        call Calc_l_my_algebra_l2_or_l2p5 (my_level='l2p5', q_sq=q_sq_prog, z=z_at_mass, l_master_l2_in=l_master, &
-            l_master_l2p5=l_master_at_mass, ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, &
-            ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte)
-      end if
+!      if (pbl3d_prog == 1) then
+!        call Fill_q_sq_prog_with_q_sq (q_sq_prog, q_sq, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+!          ! Diagnose master length scale at mass points for prognostic TKE
+!        call Fill_l_mass_with_l_face (l_master_at_face, l_master_at_mass, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+!      end if
 
       if (DEBUG) print *, 'Done Set_init_turb_state_my...'
 
