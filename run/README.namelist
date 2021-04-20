@@ -1499,6 +1499,32 @@ The following are for observation nudging:
                                                   5 = SMS-3DTKE scale-adaptive LES/PBL scheme. It must be
                                                       used with diff_opt = 2. PBL schemes must be turned off
                                                       (bl_pbl_physics=0). It can work with sf_sfclay_physics = 1, 5, 91.
+ pbl3d_opt(max_dom)                  = 0,       ! 3D PBL parameterization mixing option
+                                                  0 = off (default)
+                                                 -1 = Mellor-Yamada 1D PBL w/ PBL approximation - vertical mixing handled by 
+                                                       parameterization and horizontal mixing handled by Smagorinsky.
+                                                       Must be used with diff_opt = 1 or = 2 and km_opt = 4.
+                                                  1 = Mellor-Yamada 3D PBL w/ PBL approximation - vertical and horizontal mixing
+                                                       handled by parameterization. Must be used with diff_opt = 0.
+                                                  2 = Mellor-Yamada 3D PBL - vertical and horizontal mixing handled by 
+                                                       parameterization. Must be used with diff_opt = 0.
+ pbl3d_sfc_opt(max_dom)              = 0,       ! 3D PBL surface flux option
+                                                  0 = off (default)
+                                                  1 = constant values for similarity functions
+                                                  2 = Mellor-Yamada-Nakanishi-Niino similarity functions from Businger
+ pbl3d_l_opt(max_dom)                = 1,       ! 3D PBL length scale option
+                                                  1 = Mellor-Yamada center of mass length scale (based on Blackadar) (default)
+                                                  2 = Mellor-Yamada-Nakanishi-Niino length scale (original constants)
+ pbl3d_nsteps(max_dom)               = 1,       ! 3D PBL number of parameterization substeps
+ pbl3d_prog(max_dom)                 = 0,       ! 3D PBL closure level option
+                                                  0 = Level 2 Mellor-Yamada model (diagnostic TKE) (default)
+                                                  1 = Level 2.5 Mellor-Yamada model (prognostic TKE)
+ pbl3d_scalar_mix(max_dom)           = 0,       ! 3D PBL scalar turbulent mixing
+                                                  0 = Without scalar turbulent mixing (default)
+                                                  1 = With scalar (hydrometeor + aerosol) turbulent mixing. Currently linked to select
+                                                      hydrometeor mass mixing ratio (cloud, rain, ice, snow, and graupel) and
+                                                      number (cloud, rain, and ice) variables in addition to water and ice friendly
+                                                      aerosol number from mp_physics = 28.
  damp_opt                            = 0,	! upper level damping flag 
                                                   0 = without damping
                                                   1 = with diffusive damping, maybe used for real-data cases 
