@@ -2184,7 +2184,7 @@ DEALLOCATE(z_at_q)
            grid%turb_flux_u2, grid%turb_flux_v2, grid%turb_flux_w2, grid%turb_flux_uv, grid%turb_flux_uw, grid%turb_flux_vw, &
            grid%turb_flux_utheta_v, grid%turb_flux_vtheta_v, grid%turb_flux_wtheta_v, grid%turb_flux_theta2_v, &
            grid%turb_flux_utheta, grid%turb_flux_vtheta, grid%turb_flux_wtheta, grid%turb_flux_uqv, grid%turb_flux_vqv, &
-           grid%turb_flux_wqv, grid%du_dz_faces, grid%dv_dz_faces, grid%dthetav_dz_faces, grid%dqv_dz_faces)
+           grid%turb_flux_wqv)
      end do
    end if
 

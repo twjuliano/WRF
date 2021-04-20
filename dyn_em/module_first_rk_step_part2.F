@@ -1096,7 +1096,7 @@ BENCH_END(hor_diff_tim)
            CALL phy_bc_state_pbl3d (config_flags,              &
                 grid%u_2, grid%v_2, grid%w_2, grid%t_2,        &
                 grid%thetav, moist(:,:,:,P_QV), grid%rho,      &
-                grid%q_sq_prog_2,                              &
+                grid%q_sq_prog_2, grid%q_sq, grid%l_master,    &
                 ids, ide, jds, jde, kds, kde,                  &
                 ims, ime, jms, jme, kms, kme,                  &
                 ips, ipe, jps, jpe, kps, kpe,                  &
@@ -1139,7 +1139,7 @@ BENCH_END(hor_diff_tim)
              CALL phy_bc_state_pbl3d (config_flags,                &
                   grid%u_tmp, grid%v_tmp, grid%w_tmp, grid%th_tmp, &
                   grid%thetav, grid%qv_tmp, grid%rho_tmp,          &
-                  grid%q_sq_tmp,                                   &
+                  grid%q_sq_tmp, grid%q_sq, grid%l_master,         &
                   ids, ide, jds, jde, kds, kde,                    &
                   ims, ime, jms, jme, kms, kme,                    &
                   ips, ipe, jps, jpe, kps, kpe,                    &
@@ -1161,21 +1161,6 @@ BENCH_END(hor_diff_tim)
              qnwfa = scalar(:,:,:,P_QNWFA), qnifa = scalar(:,:,:,P_QNIFA), &
              thetav = grid%thetav, tsk = grid%tsk, t2=grid%t2, q2 = grid%q2, psfc = grid%psfc, &
              rho = grid%rho_tmp, ust = grid%ust, hfx = grid%hfx, qfx = grid%qfx, rmol = grid%rmol, &
-             du_dx_faces = grid%du_dx_faces, du_dy_faces = grid%du_dy_faces, du_dz_faces = grid%du_dz_faces, &
-             dv_dx_faces = grid%dv_dx_faces, dv_dy_faces = grid%dv_dy_faces, dv_dz_faces = grid%dv_dz_faces, &
-             dw_dx_faces = grid%dw_dx_faces, dw_dy_faces = grid%dw_dy_faces, dw_dz_faces = grid%dw_dz_faces, &
-             dqv_dx_faces = grid%dqv_dx_faces, dqv_dy_faces = grid%dqv_dy_faces, dqv_dz_faces = grid%dqv_dz_faces, &
-             dqc_dx_faces = grid%dqc_dx_faces, dqc_dy_faces = grid%dqc_dy_faces, dqc_dz_faces = grid%dqc_dz_faces, &
-             dqr_dx_faces = grid%dqr_dx_faces, dqr_dy_faces = grid%dqr_dy_faces, dqr_dz_faces = grid%dqr_dz_faces, &
-             dqi_dx_faces = grid%dqi_dx_faces, dqi_dy_faces = grid%dqi_dy_faces, dqi_dz_faces = grid%dqi_dz_faces, &
-             dqs_dx_faces = grid%dqs_dx_faces, dqs_dy_faces = grid%dqs_dy_faces, dqs_dz_faces = grid%dqs_dz_faces, &
-             dqg_dx_faces = grid%dqg_dx_faces, dqg_dy_faces = grid%dqg_dy_faces, dqg_dz_faces = grid%dqg_dz_faces, &
-             dqnc_dx_faces = grid%dqnc_dx_faces, dqnc_dy_faces = grid%dqnc_dy_faces, dqnc_dz_faces = grid%dqnc_dz_faces, &
-             dqnr_dx_faces = grid%dqnr_dx_faces, dqnr_dy_faces = grid%dqnr_dy_faces, dqnr_dz_faces = grid%dqnr_dz_faces, &
-             dqni_dx_faces = grid%dqni_dx_faces, dqni_dy_faces = grid%dqni_dy_faces, dqni_dz_faces = grid%dqni_dz_faces, &
-             dqnwfa_dx_faces = grid%dqnwfa_dx_faces, dqnwfa_dy_faces = grid%dqnwfa_dy_faces, dqnwfa_dz_faces = grid%dqnwfa_dz_faces, &
-             dqnifa_dx_faces = grid%dqnifa_dx_faces, dqnifa_dy_faces = grid%dqnifa_dy_faces, dqnifa_dz_faces = grid%dqnifa_dz_faces, &
-             dthetav_dx_faces = grid%dthetav_dx_faces, dthetav_dy_faces = grid%dthetav_dy_faces, dthetav_dz_faces = grid%dthetav_dz_faces, &
              itimestep = grid%itimestep, ss = ss, n_tracer = num_tracer, &
              q_sq = grid%q_sq, q_sq_prog = grid%q_sq_tmp, q_sq_tend = q_sq_tend_tmp, &
              q_sq_vdiff_tend = grid%q_sq_vdiff, q_sq_hdiff_tend = grid%q_sq_hdiff, q_sq_shear_tend = grid%q_sq_shear, &

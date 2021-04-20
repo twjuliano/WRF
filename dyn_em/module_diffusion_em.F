@@ -6096,9 +6096,9 @@ END SUBROUTINE phy_bc
 !=======================================================================
 !=======================================================================
 
-SUBROUTINE phy_bc_state_pbl3d ( config_flags,                    &
-                                u_2, v_2, w_2, t_2,              &
-                                thetav, moist, rho, q_sq,        &
+SUBROUTINE phy_bc_state_pbl3d ( config_flags, u_2, v_2, w_2,     &
+                                t_2, thetav, moist, rho,         &
+                                q_sq_prog, q_sq, l_master,       &
                                 ids, ide, jds, jde, kds, kde,    &
                                 ims, ime, jms, jme, kms, kme,    &
                                 ips, ipe, jps, jpe, kps, kpe,    &
@@ -6116,14 +6116,16 @@ SUBROUTINE phy_bc_state_pbl3d ( config_flags,                    &
                                             ips, ipe, jps, jpe, kps, kpe, &
                                             its, ite, jts, jte, kts, kte
 
-   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: u_2,    &
-                                                                  v_2,    &
-                                                                  w_2,    &
-                                                                  t_2,    &
-                                                                  thetav, &
-                                                                  moist,  &
-                                                                  rho,    &
-                                                                  q_sq
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(INOUT) :: u_2,       &
+                                                                  v_2,       &
+                                                                  w_2,       &
+                                                                  t_2,       &
+                                                                  thetav,    &
+                                                                  moist,     &
+                                                                  rho,       &
+                                                                  q_sq_prog, &
+                                                                  q_sq,      &
+                                                                  l_master
 
 ! End declarations.
 !-----------------------------------------------------------------------
@@ -6170,7 +6172,19 @@ SUBROUTINE phy_bc_state_pbl3d ( config_flags,                    &
                            ips, ipe, jps, jpe, kps, kpe,             &
                            its, ite, jts, jte, kts, kte              )
 
-   CALL set_physical_bc3d( q_sq, 't', config_flags,                  &
+   CALL set_physical_bc3d( q_sq_prog, 't', config_flags,             &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( q_sq, 'w', config_flags,                  &
+                           ids, ide, jds, jde, kds, kde,             &
+                           ims, ime, jms, jme, kms, kme,             &
+                           ips, ipe, jps, jpe, kps, kpe,             &
+                           its, ite, jts, jte, kts, kte              )
+
+   CALL set_physical_bc3d( l_master, 'w', config_flags,              &
                            ids, ide, jds, jde, kds, kde,             &
                            ims, ime, jms, jme, kms, kme,             &
                            ips, ipe, jps, jpe, kps, kpe,             &

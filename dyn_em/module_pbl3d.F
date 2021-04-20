@@ -551,14 +551,7 @@
 
     subroutine Calc_turb_fluxes_driver (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, qc, qr, qi, qs, qg, &
               qnc, qnr, qni, qnwfa, qnifa, &
-              thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, du_dx_faces, du_dy_faces, du_dz_faces, &
-              dv_dx_faces, dv_dy_faces, dv_dz_faces, dw_dx_faces, dw_dy_faces, dw_dz_faces, &
-              dqv_dx_faces, dqv_dy_faces, dqv_dz_faces, dthetav_dx_faces, dthetav_dy_faces, dthetav_dz_faces, &
-              dqc_dx_faces, dqc_dy_faces, dqc_dz_faces, dqr_dx_faces, dqr_dy_faces, dqr_dz_faces, dqi_dx_faces, dqi_dy_faces, &
-              dqi_dz_faces, dqs_dx_faces, dqs_dy_faces, dqs_dz_faces, dqg_dx_faces, dqg_dy_faces, dqg_dz_faces, &
-              dqnc_dx_faces, dqnc_dy_faces, dqnc_dz_faces, dqnr_dx_faces, dqnr_dy_faces, dqnr_dz_faces, &
-              dqni_dx_faces, dqni_dy_faces, dqni_dz_faces, dqnwfa_dx_faces, dqnwfa_dy_faces, dqnwfa_dz_faces, &
-              dqnifa_dx_faces, dqnifa_dy_faces, dqnifa_dz_faces, &
+              thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
               itimestep, ss, n_tracer, q_sq, q_sq_prog, q_sq_tend, &
               q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, q_sq_dissip_tend, &
               khx, khy, khz, l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2,   &
@@ -601,14 +594,6 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: q_sq_dissip_tend
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: khx, khy, khz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: thetav
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dx_faces, du_dy_faces, du_dz_faces, &
-          dv_dx_faces, dv_dy_faces, dv_dz_faces, dw_dx_faces, dw_dy_faces, dw_dz_faces, dthetav_dx_faces,   &
-          dthetav_dy_faces, dthetav_dz_faces, dqv_dx_faces, dqv_dy_faces, dqv_dz_faces, dqc_dx_faces, &
-          dqc_dy_faces, dqc_dz_faces, dqr_dx_faces, dqr_dy_faces, dqr_dz_faces, dqi_dx_faces, dqi_dy_faces, &
-          dqi_dz_faces, dqs_dx_faces, dqs_dy_faces, dqs_dz_faces, dqg_dx_faces, dqg_dy_faces, dqg_dz_faces, &
-          dqnc_dx_faces, dqnc_dy_faces, dqnc_dz_faces, dqnr_dx_faces, dqnr_dy_faces, dqnr_dz_faces, &
-          dqni_dx_faces, dqni_dy_faces, dqni_dz_faces, dqnwfa_dx_faces, dqnwfa_dy_faces, dqnwfa_dz_faces, &
-          dqnifa_dx_faces, dqnifa_dy_faces, dqnifa_dz_faces
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_master_at_mass
       real, dimension (ims:ime, jms:jme),          intent (in)    :: msfux, msfuy, msfvx, msfvy, msftx, msfty
       real, dimension (ims:ime, jms:jme),          intent (in)    :: tsk, t2, q2, psfc, ust, hfx, qfx, rmol
@@ -681,92 +666,6 @@
         print *, 'jts = ', jts, 'jte = ', jte
         print *, 'jms = ', jms, 'jme = ', jme
       end if
-
-        ! Save derivatives
-      do j = j_start, j_end
-        do k = kts, ktf + 1
-          do i = i_start, i_end
-           du_dx_faces(i, k, j) = du_dx(i, k, j)
-           du_dy_faces(i, k, j) = du_dy(i, k, j)
-           du_dz_faces(i, k, j) = du_dz(i, k, j)
-           dv_dx_faces(i, k, j) = dv_dx(i, k, j)
-           dv_dy_faces(i, k, j) = dv_dy(i, k, j)
-           dv_dz_faces(i, k, j) = dv_dz(i, k, j)
-           dw_dx_faces(i, k, j) = dw_dx(i, k, j)
-           dw_dy_faces(i, k, j) = dw_dy(i, k, j)
-           dw_dz_faces(i, k, j) = dw_dz(i, k, j)
-           dqv_dx_faces(i, k, j) = dqv_dx(i, k, j)
-           dqv_dy_faces(i, k, j) = dqv_dy(i, k, j)
-           dqv_dz_faces(i, k, j) = dqv_dz(i, k, j)
-           dthetav_dx_faces(i, k, j) = dthetav_dx(i, k, j)
-           dthetav_dy_faces(i, k, j) = dthetav_dy(i, k, j)
-           dthetav_dz_faces(i, k, j) = dthetav_dz(i, k, j)
-           if ( config_flags%pbl3d_scalar_mix .eq. 1 .and. ss .eq. config_flags%pbl3d_nsteps ) then
-             dqc_dx_faces(i, k, j) = dqc_dx(i, k, j)
-             dqc_dy_faces(i, k, j) = dqc_dy(i, k, j)
-             dqc_dz_faces(i, k, j) = dqc_dz(i, k, j)
-             dqr_dx_faces(i, k, j) = dqr_dx(i, k, j)
-             dqr_dy_faces(i, k, j) = dqr_dy(i, k, j)
-             dqr_dz_faces(i, k, j) = dqr_dz(i, k, j)
-             dqi_dx_faces(i, k, j) = dqi_dx(i, k, j)
-             dqi_dy_faces(i, k, j) = dqi_dy(i, k, j)
-             dqi_dz_faces(i, k, j) = dqi_dz(i, k, j)
-             dqs_dx_faces(i, k, j) = dqs_dx(i, k, j)
-             dqs_dy_faces(i, k, j) = dqs_dy(i, k, j)
-             dqs_dz_faces(i, k, j) = dqs_dz(i, k, j)
-             dqg_dx_faces(i, k, j) = dqg_dx(i, k, j)
-             dqg_dy_faces(i, k, j) = dqg_dy(i, k, j)
-             dqg_dz_faces(i, k, j) = dqg_dz(i, k, j)
-             dqnc_dx_faces(i, k, j) = dqnc_dx(i, k, j)
-             dqnc_dy_faces(i, k, j) = dqnc_dy(i, k, j)
-             dqnc_dz_faces(i, k, j) = dqnc_dz(i, k, j)
-             dqnr_dx_faces(i, k, j) = dqnr_dx(i, k, j)
-             dqnr_dy_faces(i, k, j) = dqnr_dy(i, k, j)
-             dqnr_dz_faces(i, k, j) = dqnr_dz(i, k, j)
-             dqni_dx_faces(i, k, j) = dqni_dx(i, k, j)
-             dqni_dy_faces(i, k, j) = dqni_dy(i, k, j)
-             dqni_dz_faces(i, k, j) = dqni_dz(i, k, j)
-             dqnwfa_dx_faces(i, k, j) = dqnwfa_dx(i, k, j)
-             dqnwfa_dy_faces(i, k, j) = dqnwfa_dy(i, k, j)
-             dqnwfa_dz_faces(i, k, j) = dqnwfa_dz(i, k, j)
-             dqnifa_dx_faces(i, k, j) = dqnifa_dx(i, k, j)
-             dqnifa_dy_faces(i, k, j) = dqnifa_dy(i, k, j)
-             dqnifa_dz_faces(i, k, j) = dqnifa_dz(i, k, j)
-           else
-             dqc_dx_faces(i, k, j) = 0.0
-             dqc_dy_faces(i, k, j) = 0.0
-             dqc_dz_faces(i, k, j) = 0.0
-             dqr_dx_faces(i, k, j) = 0.0
-             dqr_dy_faces(i, k, j) = 0.0
-             dqr_dz_faces(i, k, j) = 0.0
-             dqi_dx_faces(i, k, j) = 0.0
-             dqi_dy_faces(i, k, j) = 0.0
-             dqi_dz_faces(i, k, j) = 0.0
-             dqs_dx_faces(i, k, j) = 0.0
-             dqs_dy_faces(i, k, j) = 0.0
-             dqs_dz_faces(i, k, j) = 0.0
-             dqg_dx_faces(i, k, j) = 0.0
-             dqg_dy_faces(i, k, j) = 0.0
-             dqg_dz_faces(i, k, j) = 0.0
-             dqnc_dx_faces(i, k, j) = 0.0
-             dqnc_dy_faces(i, k, j) = 0.0
-             dqnc_dz_faces(i, k, j) = 0.0
-             dqnr_dx_faces(i, k, j) = 0.0
-             dqnr_dy_faces(i, k, j) = 0.0
-             dqnr_dz_faces(i, k, j) = 0.0
-             dqni_dx_faces(i, k, j) = 0.0
-             dqni_dy_faces(i, k, j) = 0.0
-             dqni_dz_faces(i, k, j) = 0.0
-             dqnwfa_dx_faces(i, k, j) = 0.0
-             dqnwfa_dy_faces(i, k, j) = 0.0
-             dqnwfa_dz_faces(i, k, j) = 0.0
-             dqnifa_dx_faces(i, k, j) = 0.0
-             dqnifa_dy_faces(i, k, j) = 0.0
-             dqnifa_dz_faces(i, k, j) = 0.0
-           end if
-          end do
-        end do
-      end do
 
       call Calc_turb_fluxes_my (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
           du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dqv_dx, dqv_dy, dqv_dz, dthetav_dx, dthetav_dy, dthetav_dz, &
@@ -6399,7 +6298,7 @@
               turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v,                     &
               turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_utheta,                 &
               turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqv,                        &
-              turb_flux_vqv, turb_flux_wqv, du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces)
+              turb_flux_vqv, turb_flux_wqv)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                      !
@@ -6424,19 +6323,17 @@
         ! Thermo/kinematic state vars
       real, dimension(ims:ime, kms:kme, jms:jme), intent(in)  :: t_2, qv, u, v, alt
       real, dimension(ims:ime, jms:jme),          intent(in)  :: ust, hfx, qfx, rmol
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: thetav
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: thetav
 
         ! Turb state vars
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: q_sq_prog, q_sq,     &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: q_sq_prog, q_sq,     &
           q_sq_vdiff, q_sq_hdiff, q_sq_shear, q_sq_buoyancy, q_sq_dissip
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: l_master, l_master_at_mass, &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: l_master, l_master_at_mass, &
           turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv,          &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                  &
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,      &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,            &
           turb_flux_uqv, turb_flux_vqv, turb_flux_wqv
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dz_faces, dv_dz_faces, &
-                                                                     dthetav_dz_faces, dqv_dz_faces
 
       integer, intent(in) :: ids, ide, jds, jde, kds, kde, &
                              ims, ime, jms, jme, kms, kme, &
@@ -6456,8 +6353,7 @@
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                   &
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,       &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,             &
-          turb_flux_uqv, turb_flux_vqv, turb_flux_wqv,                      &
-          du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces          )
+          turb_flux_uqv, turb_flux_vqv, turb_flux_wqv                       )
 
     end subroutine Init_pbl3d
 
@@ -6476,8 +6372,7 @@
               turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                   &
               turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,       &
               turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,             &
-              turb_flux_uqv, turb_flux_vqv, turb_flux_wqv,                      &
-              du_dz_faces, dv_dz_faces, dthetav_dz_faces, dqv_dz_faces          )
+              turb_flux_uqv, turb_flux_vqv, turb_flux_wqv                       )
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                       !
@@ -6503,17 +6398,15 @@
       real, dimension(ims:ime, jms:jme),          intent(in)  :: ust, hfx, qfx, rmol
       real, dimension(ims:ime, kms:kme, jms:jme), intent(in)  :: t_2, qv, u, v, &
                                                                  alt, ph, phb
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: thetav
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: q_sq_prog, q_sq,     &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: thetav
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: q_sq_prog, q_sq,     &
           q_sq_vdiff, q_sq_hdiff, q_sq_shear, q_sq_buoyancy, q_sq_dissip
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: l_master, l_master_at_mass, &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: l_master, l_master_at_mass, &
           turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv,          &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                  &
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,      &
           turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta,            &
           turb_flux_uqv, turb_flux_vqv, turb_flux_wqv
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: du_dz_faces, dv_dz_faces, &
-                                                                     dthetav_dz_faces, dqv_dz_faces
 
         ! Local vars
       real, dimension (kts:kte) :: sqv
@@ -6523,8 +6416,6 @@
                                                      dthetav_dz, dqv_dz
       real, dimension (ims:ime, kms:kme, jms:jme) :: rho
       integer :: i_start, i_end, j_start, j_end, init_iter
-
-      if (restart) return
 
         ! Defines mass point at faces indexes
       jtf = Min (jte, jde - 1)
@@ -6552,18 +6443,6 @@
       call Calc_dmassvar_dz (thetav, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dthetav_dz)
 
       call Calc_dmassvar_dz (qv, rdz, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, dqv_dz)
-
-        ! Save derivatives
-      do j = j_start, j_end
-        do k = kts, ktf + 1
-          do i = i_start, i_end
-           du_dz_faces(i, k, j) = du_dz(i, k, j)
-           dv_dz_faces(i, k, j) = dv_dz(i, k, j)
-           dqv_dz_faces(i, k, j) = dqv_dz(i, k, j)
-           dthetav_dz_faces(i, k, j) = dthetav_dz(i, k, j)
-          end do
-        end do
-      end do
 
         ! Call MY model to set initial state
       call Set_init_turb_state_my (restart, pbl3d_constants, pbl3d_nsteps, pbl3d_opt, pbl3d_prog, pbl3d_sfc_opt, pbl3d_l_opt, ids, ide, &

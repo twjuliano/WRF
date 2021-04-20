@@ -727,8 +727,6 @@
         loop_k: do k = kts + 1, ktf
           loop_i: do i = i_start, i_end
 
-!            print *, 'i, k, j = ', i, k, j
-
             if_no_turb: if (q_sq(i, k, j) == Q_SQ_MIN) then
 
               call Set_fluxes_to_min (q_sq(i, k, j), turb_flux_u2(i, k, j),   &
@@ -2411,7 +2409,7 @@
           i_loop: do i = i_start, i_end
 
             if_turb: if (rif(i, k, j) < rif_c) then
-
+ 
               q_sq(i, k, j) =  b_1 * l_master(i, k, j) ** 2.0 *        &
                   (du_dz(i, k, j) ** 2.0 + dv_dz(i, k, j) ** 2.0) *  &
                   (1.0 - rif(i, k, j)) * sm(i, k, j)
@@ -2801,10 +2799,10 @@
       real, dimension(ims:ime, jms:jme),          intent(in)  :: ust, hfx, qfx, rmol
       real, dimension(ims:ime, kms:kme, jms:jme), intent(in)  :: t_2, qv, &
                                                                  u, v, alt, ph, phb
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: rho
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: q_sq_prog, q_sq,     &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: rho
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: q_sq_prog, q_sq,     &
           q_sq_vdiff, q_sq_hdiff, q_sq_shear, q_sq_buoyancy, q_sq_dissip
-      real, dimension(ims:ime, kms:kme, jms:jme), intent(out) :: l_master, l_master_at_mass, &
+      real, dimension(ims:ime, kms:kme, jms:jme), intent(inout) :: l_master, l_master_at_mass, &
           turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv,          &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v,                  &
           turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v,      &
@@ -2833,6 +2831,8 @@
       call Set_my_l2_global_vars
 
       call Set_my_qsq_min (pbl3d_prog)
+
+      if (restart) return
 
         ! Initializes thetav, TKE, L, and the turbulent fluxes
       j_loop_init: do j = jts, jtf
