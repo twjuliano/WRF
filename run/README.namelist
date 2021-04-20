@@ -1501,13 +1501,16 @@ The following are for observation nudging:
                                                       (bl_pbl_physics=0). It can work with sf_sfclay_physics = 1, 5, 91.
  pbl3d_opt(max_dom)                  = 0,       ! 3D PBL parameterization mixing option
                                                   0 = off (default)
-                                                 -1 = Mellor-Yamada 1D PBL w/ PBL approximation - vertical mixing handled by 
+                                                 -1 = Mellor-Yamada 1D PBL w/ PBL approximation - vertical mixing handled by
                                                        parameterization and horizontal mixing handled by Smagorinsky.
-                                                       Must be used with diff_opt = 1 or = 2 and km_opt = 4.
+                                                       PBL scheme must be turned off (bl_pbl_physics = 0). Must be used with
+                                                       diff_opt = 1 or = 2 and km_opt = 4.
                                                   1 = Mellor-Yamada 3D PBL w/ PBL approximation - vertical and horizontal mixing
-                                                       handled by parameterization. Must be used with diff_opt = 0.
+                                                       handled by parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
+                                                       Must be used with diff_opt = 0.
                                                   2 = Mellor-Yamada 3D PBL - vertical and horizontal mixing handled by 
-                                                       parameterization. Must be used with diff_opt = 0.
+                                                       parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
+                                                       Must be used with diff_opt = 0.
  pbl3d_sfc_opt(max_dom)              = 0,       ! 3D PBL surface flux option
                                                   0 = off (default)
                                                   1 = constant values for similarity functions
