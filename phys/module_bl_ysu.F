@@ -711,6 +711,7 @@ contains
        brint = (brcr(i)-brdn(i))/(brup(i)-brdn(i))
      endif
      hpbl(i) = za(i,k-1)+brint*(za(i,k)-za(i,k-1))
+
      if(hpbl(i).lt.zq(i,2)) kpbl(i) = 1
      if(kpbl(i).le.1) pblflg(i) = .false.
    enddo
@@ -1756,6 +1757,7 @@ contains
 
       wt=.5*TANH((zi - sbl_lim)/sbl_damp) + .5
       zi=PBLH_TKE*(1.-wt) + zi*wt
+
       
    END SUBROUTINE GET_PBLH
 ! ==================================================================

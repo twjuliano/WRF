@@ -61,7 +61,7 @@ CONTAINS
 
     USE module_sfs_driver !JDM
     USE module_stoch, ONLY : update_stoch_ten, perturb_physics_tend,RAND_PERT_UPDATE
-
+    USE module_scpm_jdm
 
     IMPLICIT NONE
 
@@ -371,6 +371,57 @@ BENCH_START(comp_diff_metrics_tim)
          ENDDO
          !$OMP END PARALLEL DO
 BENCH_END(comp_diff_metrics_tim)
+
+!JDM Perturbations
+
+
+IF ( ( config_flags%m_pblh_opt .EQ. 1 ) .AND. ( config_flags%km_opt .EQ. 4 ) ) THEN   
+
+         !$OMP PARALLEL DO   &
+         !$OMP PRIVATE ( ij )
+         DO ij = 1 , grid%num_tiles
+
+           CALL force_down_meso_pblh( grid%m_pblh, grid%pblh,            &   
+                                      ids, ide, jds, jde, kds, kde,      &
+                                      ims, ime, jms, jme, kms, kme,      &
+                                      grid%i_start(ij), grid%i_end(ij),  &
+                                      grid%j_start(ij), grid%j_end(ij),  &
+                                      k_start    , k_end                  )
+
+
+        ENDDO
+         !$OMP END PARALLEL DO
+
+ENDIF
+
+
+IF (  config_flags%scpm_jdm_opt .GT. 0 ) THEN   
+
+   IF (  config_flags%scpm_jdm_opt .EQ. 1 ) THEN   
+            !$OMP PARALLEL DO   &
+            !$OMP PRIVATE ( ij )
+            DO ij = 1 , grid%num_tiles
+
+              CALL calc_scpm_jdm_t ( config_flags%scpm_jdm_opt,                  &
+                                     config_flags%m_pblh_opt,                    &
+                                     grid%prttms, grid%prtdt, grid%prtnk,        &
+                                     grid%prtz, grid%prtseed, grid%pert_t,       &  
+                                     grid%m_pblh,                                & 
+                                     grid%t_2, grid%u_2, grid%v_2, grid%rdz,     &
+                                     grid%dx, grid%dt,                           & 
+                                     ids, ide, jds, jde, kds, kde,               &
+                                     ims, ime, jms, jme, kms, kme,               &
+                                     grid%i_start(ij), grid%i_end(ij),           &
+                                     grid%j_start(ij), grid%j_end(ij),           &
+                                     k_start    , k_end                          )
+
+            ENDDO
+            !$OMP END PARALLEL DO
+
+   ENDIF
+
+ENDIF
+
 
 #ifdef DM_PARALLEL
 #  include "HALO_EM_TKE_C.inc"
@@ -1035,7 +1086,7 @@ BENCH_START(hor_diff_tim)
                                       grid%div,                     &
                                       moist, chem, scalar,tracer,               &
                                       grid%msfux,grid%msfuy, grid%msfvx,grid%msfvy, grid%msftx,  &
-                                      grid%msfty, grid%xkmh, grid%xkhh, config_flags%km_opt,     &
+                                      grid%msfty, grid%xkmh, grid%xkmv, grid%xkhh, config_flags%km_opt,     &
                                       grid%rdx, grid%rdy, grid%rdz, grid%rdzw,                   &
                                       grid%fnm, grid%fnp, grid%cf1, grid%cf2, grid%cf3,          &
                                       grid%zx, grid%zy, grid%dn, grid%dnw, grid%rho,             &
