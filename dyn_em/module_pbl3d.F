@@ -5820,7 +5820,7 @@
       do j = j_start, j_end
         do k = kts, ktf
           do i = i_start, i_end
-            q_sq_vdiff_tend(i, k, j) = rdzw(i, k, j) * ( q_sq_vdiff_hold(i, k + 1, j) - q_sq_vdiff_hold(i, k, j) )
+            q_sq_vdiff_tend(i, k, j) = - rdzw(i, k, j) * ( q_sq_vdiff_hold(i, k + 1, j) - q_sq_vdiff_hold(i, k, j) )
             q_sq_vdiff_tend_tmp = ( G / dnw(k) ) *  &
                                   ( q_sq_vdiff_hold(i, k + 1, j) - q_sq_vdiff_hold(i, k, j) )
             q_sq_tend(i, k, j) = q_sq_tend(i, k, j) + ( q_sq_vdiff_tend_tmp / N_PBL3D )
