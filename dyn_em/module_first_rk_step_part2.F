@@ -1206,7 +1206,7 @@ BENCH_END(hor_diff_tim)
            DO ij = 1 , grid%num_tiles
              CALL wrf_debug (200 , ' call Calc_turb_fluxes_driver')
              CALL Calc_turb_fluxes_driver (config_flags = config_flags, &
-             dz = dz8w, z_at_mass = grid%z, u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, &
+             dz = dz8w, z_at_mass = grid%z, z_at_w = grid%z_at_w, u = grid%u_tmp, v = grid%v_tmp, w = grid%w_tmp, &
              th = th_phy, th2 = grid%th_tmp, qv = grid%qv_tmp, qc = moist(:,:,:,P_QC), &
              qr = moist(:,:,:,P_QR), qi = moist(:,:,:,P_QI), qs = moist(:,:,:,P_QS), qg = moist(:,:,:,P_QG), &
              qnc = scalar(:,:,:,P_QNC), qnr = scalar(:,:,:,P_QNR), qni = scalar(:,:,:,P_QNI), &
