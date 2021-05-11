@@ -549,7 +549,7 @@
     end subroutine Update_temp_state
 
 
-    subroutine Calc_turb_fluxes_driver (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, qc, qr, qi, qs, qg, &
+    subroutine Calc_turb_fluxes_driver (config_flags, dz, z_at_mass, z_at_w, u, v, w, th, th2, qv, qc, qr, qi, qs, qg, &
               qnc, qnr, qni, qnwfa, qnifa, &
               thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
               itimestep, ss, n_tracer, q_sq, q_sq_prog, q_sq_tend, &
@@ -582,7 +582,7 @@
       type (grid_config_rec_type), intent (in) :: config_flags
       integer, intent(in) :: itimestep, id, ss, n_tracer
 
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: dz, z_at_mass, u, v, &
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: dz, z_at_mass, z_at_w, u, v, &
           w, th, th2, qv, rho, zx, zy, rdz, rdzw
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: qc, qr, qi, qs, qg, qnc, qnr, qni, qnwfa, qnifa
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq, q_sq_prog
@@ -623,6 +623,7 @@
           dqc_dx, dqc_dy, dqc_dz, dqr_dx, dqr_dy, dqr_dz, dqi_dx, dqi_dy, dqi_dz, dqs_dx, dqs_dy, dqs_dz, &
           dqg_dx, dqg_dy, dqg_dz, dqnc_dx, dqnc_dy, dqnc_dz, dqnr_dx, dqnr_dy, dqnr_dz, &
           dqni_dx, dqni_dy, dqni_dz, dqnwfa_dx, dqnwfa_dy, dqnwfa_dz, dqnifa_dx, dqnifa_dy, dqnifa_dz
+      real, dimension (its:ite, kts:kte, jts:jte) :: l_dissip
       logical, parameter :: DEBUG = .false.
       integer :: i, j, k, i_start, i_end, j_start, j_end, ktf
 
@@ -667,10 +668,10 @@
         print *, 'jms = ', jms, 'jme = ', jme
       end if
 
-      call Calc_turb_fluxes_my (config_flags, dz, z_at_mass, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
+      call Calc_turb_fluxes_my (config_flags, dz, z_at_mass, z_at_w, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
           du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dqv_dx, dqv_dy, dqv_dz, dthetav_dx, dthetav_dy, dthetav_dz, &
           dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, itimestep, ss, n_tracer, q_sq, q_sq_prog, &
-          l_master, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
+          l_master, l_master_at_mass, l_dissip, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
           turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv, &
           turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, &
           turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
@@ -691,7 +692,7 @@
       if ( config_flags%pbl3d_prog .gt. 0 ) then   ! Prognostic TKE
         call Calc_q_sq_l2p5 (config_flags, u, v, w, zx, zy, th2, qv, rho, thetav, tsk, t2, q2, psfc, ust, hfx, &
             du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dthetav_dz, q_sq, q_sq_prog, q_sq_tend, &
-            q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, q_sq_dissip_tend, l_master, l_master_at_mass, &
+            q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, q_sq_dissip_tend, l_master, l_master_at_mass, l_dissip, &
             turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, &
             turb_flux_u2_mass, turb_flux_v2_mass, turb_flux_w2_mass, turb_flux_uv_mass, turb_flux_uw_mass, turb_flux_vw_mass, &
             turb_flux_wtheta_v_mass, dn, dnw, fnm, fnp, msftx, msfty, msfux, msfuy, msfvx, msfvy, mut, c1h, c2h, z_at_mass, rdx, rdy, &
@@ -2411,7 +2412,7 @@
       if (config_flags%open_ys .or. config_flags%specified .or. &
           config_flags%nested) j_start = Max (jds + 1, jts)
       if (config_flags%open_ye .or. config_flags%specified .or. &
-          config_flags%nested) j_end = Min (jde - 1, jte)
+          config_flags%nested) j_end = Min (jde - 2, jte)
 
         ! Calc flux at u point in the faces
       do j = j_start, j_end
@@ -2489,13 +2490,13 @@
       j_end = jte
       ktf = Min (kte, kde - 1)
 
-      IF (config_flags%open_xs .or. config_flags%specified .or. &
+      if (config_flags%open_xs .or. config_flags%specified .or. &
           config_flags%nested) i_start = Max (ids + 1, its)
-      IF (config_flags%open_xe .or. config_flags%specified .or. &
-          config_flags%nested) i_end   = Min (ide - 1, ite)
-      IF (config_flags%open_ys .or. config_flags%specified .or. &
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
           config_flags%nested) j_start = Max (jds + 1, jts)
-      IF (config_flags%open_ye .or. config_flags%specified .or. &
+      if (config_flags%open_ye .or. config_flags%specified .or. &
           config_flags%nested) j_end   = Min (jde - 1, jte)
 
         ! Calc flux at v points in the faces
@@ -4241,7 +4242,7 @@
     subroutine Calc_q_sq_l2p5 (config_flags, u, v, w, zx, zy, t, qv, rho, thetav, tsk, t2, q2, psfc, ust, hfx, &
               du_dx_faces, du_dy_faces, du_dz_faces, dv_dx_faces, dv_dy_faces, dv_dz_faces, dw_dx_faces, dw_dy_faces, dw_dz_faces, &
               dthetav_dz_faces, q_sq, q_sq_prog, q_sq_tend, q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, &
-              q_sq_dissip_tend, l_master_at_face, l_master_at_mass, turb_flux_u2_face, turb_flux_v2_face, turb_flux_w2_face, &
+              q_sq_dissip_tend, l_master_at_face, l_master_at_mass, l_dissip, turb_flux_u2_face, turb_flux_v2_face, turb_flux_w2_face, &
               turb_flux_uv_face, turb_flux_uw_face, turb_flux_vw_face, turb_flux_wtheta_v_face, turb_flux_u2, turb_flux_v2, &
               turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, dn, dnw, fnm, fnp, &
               msftx, msfty, msfux, msfuy, msfvx, msfvy, mut, c1, c2, z_at_mass, rdx, rdy, rdz, rdzw, cf1, cf2, cf3, dt, &
@@ -4278,6 +4279,7 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master_at_face
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: l_master_at_mass
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: l_dissip
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: turb_flux_u2, turb_flux_v2, turb_flux_w2, &
                                                                      turb_flux_uv, turb_flux_uw, turb_flux_vw, &
                                                                      turb_flux_wtheta_v
@@ -4330,7 +4332,7 @@
       call Calc_q_sq_rhs (config_flags, zx, zy, du_dz_mass, dv_dz_mass, dw_dz_mass, du_dx_mass, dv_dx_mass, dw_dx_mass, &
           du_dy_mass, dv_dy_mass, dw_dy_mass, dthetav_dz_mass, q_sq, q_sq_prog, q_sq_tend, &
           q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, q_sq_buoyancy_tend, q_sq_dissip_tend, &
-          l_master_at_face, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
+          l_master_at_face, l_master_at_mass, l_dissip, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
           turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, dn, dnw, fnm, fnp, &
           msftx, msfty, msfux, msfuy, msfvx, msfvy, mut, c1, c2, z_at_mass, rdx, rdy, rdz, rdzw, cf1, cf2, cf3, dt, &
           ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
@@ -5639,7 +5641,7 @@
 
     subroutine Calc_q_sq_rhs (config_flags, zx, zy, du_dz, dv_dz, dw_dz, du_dx, dv_dx, dw_dx, du_dy, dv_dy, dw_dy, &
               dthetav_dz, q_sq, q_sq_prog, q_sq_tend, q_sq_vdiff_tend, q_sq_hdiff_tend, q_sq_shear_tend, &
-              q_sq_buoyancy_tend, q_sq_dissip_tend, l_master_at_face, l_master_at_mass, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
+              q_sq_buoyancy_tend, q_sq_dissip_tend, l_master_at_face, l_master_at_mass, l_dissip, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
               turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, dn, dnw, fnm, fnp, &
               msftx, msfty, msfux, msfuy, msfvx, msfvy, mut, c1, c2, z_at_mass, rdx, rdy, rdz, rdzw, cf1, cf2, cf3, dt, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
@@ -5671,6 +5673,7 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master_at_face
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master_at_mass
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: l_dissip
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: turb_flux_u2, turb_flux_v2, turb_flux_w2, &
                                                                      turb_flux_uv, turb_flux_uw, turb_flux_vw, &
                                                                      turb_flux_wtheta_v
@@ -5731,7 +5734,7 @@
           ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
 
         !!! Dissipation !!!
-      call Calc_q_sq_dissip (N_PBL3D, q_sq_dissip_tend, q_sq_tend, l_master_at_mass, q_sq_prog, mut, c1, c2, &
+      call Calc_q_sq_dissip (config_flags%pbl3d_l_opt, N_PBL3D, q_sq_dissip_tend, q_sq_tend, l_master_at_mass, l_dissip, q_sq_prog, mut, c1, c2, &
           ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
 
         !!! Bound tendency !!!
@@ -6180,16 +6183,18 @@
     end subroutine Calc_q_sq_buoyancy
 
 
-    subroutine Calc_q_sq_dissip (N_PBL3D, q_sq_dissip_tend, q_sq_tend, l_master, q_sq, mut, c1, c2, &
+    subroutine Calc_q_sq_dissip (l_opt, N_PBL3D, q_sq_dissip_tend, q_sq_tend, l_master, l_dissip, q_sq, mut, c1, c2, &
               ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
 
       implicit none
 
+      integer,                                     intent (in)  :: l_opt
       real,                                        intent (in)  :: N_PBL3D
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: q_sq_dissip_tend
       real, dimension (its:ite, kts:kte, jts:jte), intent (inout) :: q_sq_tend
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: q_sq
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: l_master
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)  :: l_dissip
 
       real, dimension (ims:ime, jms:jme), intent (in) :: mut
       real, dimension (kms:kme),          intent (in) :: c1, c2
@@ -6199,6 +6204,7 @@
 
         ! Local vars
       integer :: i, j, k
+      real :: l
       logical, parameter :: DEBUG = .false.
 
       do j = j_start, j_end
@@ -6211,8 +6217,13 @@
               print *, '  l_master = ', l_master(i, k, j)
               print *, '  b1 = ', b_1
             end if
+            if (l_opt < 3) then
+              l = l_master(i, k, j)
+            else
+              l = (l_dissip(i, k, j) + l_dissip(i, k + 1, j)) / 2.
+            end if
             q_sq_dissip_tend(i, k, j) = 2. * ( q_sq(i, k, j) ** 1.5 ) /  &
-                                             ( b_1 * l_master(i, k, j) )
+                                             ( b_1 * l )
             q_sq_tend(i, k, j) = q_sq_tend(i, k, j) - ( (c1(k) * mut(i, j) + c2(k)) * q_sq_dissip_tend(i, k, j) / N_PBL3D )
 
             if ( DEBUG ) then
