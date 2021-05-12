@@ -1205,8 +1205,9 @@ state   real   turb_flux_uw_mass     ikj     misc        1         -       r    
 state   real   turb_flux_vw_mass     ikj     misc        1         -       r       "turb_flux_vw_mass"      "v w covariance"  "m2 s-2"
 state   real   turb_flux_uv_mass     ikj     misc        1         -       -       "turb_flux_uv_mass"      "u v covariance"  "m2 s-2"
 state   real   turb_flux_wtheta_v_mass ikj     misc        1         -       r       "turb_flux_wtheta_v_mass"  "w theta_virtual covariance"  "K m s-1"
-state   real   l_master              ikj     misc        1         Z       rh      "l_master"            "Master length scale"    "m"
-state   real   l_master_at_mass      ikj     misc        1         -       r       "l_master_mass"       "Master length scale"    "m"
+state   real   l_master              ikj     misc        1         Z       rh      "l_master"            "Master length scale at faces"    "m"
+state   real   l_master_at_mass      ikj     misc        1         -       r       "l_master_mass"       "Master length scale at mass points"    "m"
+state   real   l_boulac              ikj     misc        1         Z       r       "l_boulac"            "Dissipation length scale at faces"    "m"
 
 state   real   u_tmp                 ikj     misc        1         X       r       "u_tmp"         "u  temporary array"    "m s-1"
 state   real   v_tmp                 ikj     misc        1         Y       r       "v_tmp"         "v  temporary array"    "m s-1"

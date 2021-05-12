@@ -73,7 +73,7 @@
     subroutine Calc_turb_fluxes_my (config_flags, dz, z_at_mass, z_at_w, u, v, w, th, th2, qv, thetav, tsk, t2, q2, psfc, rho, ust, hfx, qfx, rmol, &
               du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, dw_dx, dw_dy, dw_dz, dqv_dx, dqv_dy, dqv_dz, dthetav_dx, dthetav_dy, dthetav_dz, &
               dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, itimestep, ss, n_tracer, q_sq, q_sq_prog, &
-              l_master, l_master_at_mass, l_dissip, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
+              l_master, l_master_at_mass, l_boulac, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, &
               turb_flux_uw, turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v, turb_flux_theta2_v, turb_flux_uqv, &
               turb_flux_vqv, turb_flux_wqv, turb_flux_utheta, turb_flux_vtheta, turb_flux_wtheta, turb_flux_uqc, turb_flux_vqc, &
               turb_flux_wqc, turb_flux_uqr, turb_flux_vqr, turb_flux_wqr, turb_flux_uqi, turb_flux_vqi, turb_flux_wqi, &
@@ -105,8 +105,7 @@
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)   :: du_dx, du_dy, du_dz, dv_dx, dv_dy, dv_dz, &
           dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy, dqv_dz, dqc_dz, dqr_dz,    &
           dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_master_at_mass
-      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: l_dissip
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_master_at_mass, l_boulac
       real, dimension (ims:ime, jms:jme),          intent (in)    :: msfux, msfuy, msfvx, msfvy, msftx, msfty
       real, dimension (ims:ime, jms:jme),          intent (in)    :: tsk, t2, thetav, q2, psfc, ust, hfx, qfx, rmol
       real, dimension (ims:ime, jms:jme),          intent (in)    :: mut
@@ -131,7 +130,7 @@
       integer :: i, j, k, i_start, i_end, j_start, j_end, ktf
 
       if (config_flags%pbl3d_opt < 2) then  ! PBL approx analytical solution only
-        call Calc_fluxes_pbl_approx (config_flags, ss, l_master, l_dissip, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+        call Calc_fluxes_pbl_approx (config_flags, ss, l_master, l_boulac, du_dz, dv_dz, dthetav_dz, dqv_dz, &
             dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, &
             th2, qv, dn, dnw, fnm, fnp, dx, dy, dz, z_at_w, zx, zy, msftx, msfty, rdz, rdzw, cf1, cf2, cf3, dt, id, &
             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts,    &
@@ -146,7 +145,8 @@
             turb_flux_uqnwfa, turb_flux_vqnwfa, turb_flux_wqnwfa, turb_flux_uqnifa, turb_flux_vqnifa, turb_flux_wqnifa, &
             u, v, w, thetav, rho, ust, hfx, qfx, rmol)
       else if (config_flags%pbl3d_opt == 2) then  ! Full 3D numerical solution
-        call Calc_fluxes (config_flags, id, config_flags%specified, q_sq, q_sq_prog, l_master, l_dissip, du_dx, du_dy, du_dz, dv_dx, dv_dy,   &
+        call Calc_fluxes (config_flags, id, config_flags%specified, q_sq, q_sq_prog, l_master, l_boulac, &
+            du_dx, du_dy, du_dz, dv_dx, dv_dy,   &
             dv_dz, dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy,  &
             dqv_dz, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw,    &
             turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v,        &
@@ -244,7 +244,7 @@
 
 
     subroutine Calc_l_master_algebra (pbl3d_l_opt, q_sq, dz, rdzw, rmol, wthv, dthetav_dz, l_master, &
-              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+              l_boulac, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         !                                                             !
@@ -265,7 +265,7 @@
       real, dimension (ims:ime, jms:jme),          intent (in) :: rmol
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: wthv
       real, dimension (its:ite, kts:kte, jts:jte), intent (in) :: dthetav_dz
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: l_master
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: l_master, l_boulac
       integer,                                     intent (in)  :: ids, ide, jds, jde, kds, kde, &
                                                                    ims, ime, jms, jme, kms, kme, &
                                                                    its, ite, jts, jte, kts, kte
@@ -352,10 +352,12 @@
               end if
 
               l_master(i, k, j) = MIN( (l_s * l0 * l_b) / (l_s * l0 + l_s * l_b + l0 * l_b), l_f )
+              l_boulac(i, k, j) = l_master(i, k, j)  ! here we are just filling in dissipation boulac length scale
 
             end if
           end do
           l_master(i, kte, j) = l_master(i, ktf, j)
+          l_boulac(i, kte, j) = l_boulac(i, ktf, j)
 
           if (DEBUG) call Debug_l_my_algebra
 
@@ -387,7 +389,7 @@
     end subroutine Calc_l_master_algebra
 
 
-    subroutine Calc_l_boulac_master_algebra (q_sq, z, dz, th, dlu, dld, dls, dlk, l_master, l_dissip, &
+    subroutine Calc_l_boulac_master_algebra (q_sq, z, dz, th, dlu, dld, dls, dlk, l_master, l_boulac, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -408,8 +410,7 @@
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: z, dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in) :: th
       real, dimension (its:ite, kts:kte, jts:jte), intent (out) :: dlu, dld, dls, dlk
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: l_master
-      real, dimension (its:ite, kts:kte, jts:jte), intent (out) :: l_dissip
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out) :: l_master, l_boulac
       integer,                                     intent (in)  :: ids, ide, jds, jde, kds, kde, &
                                                                    ims, ime, jms, jme, kms, kme, &
                                                                    its, ite, jts, jte, kts, kte
@@ -484,21 +485,23 @@
             end do
           end do
 
-          do k = kts, kte
+          do k = kts, ktf
             dlu(i, k, j) = max( dlu(i, k, j), 0.0 )
             dld(i, k, j) = max( min( dld(i, k, j), z(i, k, j) ), 0.0 )
             dls(i, k, j) = max( sqrt( dlu(i, k, j) * dld(i, k, j) ), 0.1 )
             dlk(i, k, j) = min( dlu(i, k, j), dld(i, k, j) )
-            l_master(i, k, j) = dlk(i, k, j)
-            l_dissip(i, k, j) = dls(i, k, j)
+            l_master(i, k, j) = dlk(i, k, j)  ! turbulent length scale
+            l_boulac(i, k, j) = dls(i, k, j)  ! dissipation length scale
           end do
+          l_master(i, kte, j) = l_master(i, ktf, j)
+          l_boulac(i, kte, j) = l_boulac(i, ktf, j)
         end do
       end do
 
     end subroutine Calc_l_boulac_master_algebra
 
 
-    subroutine Calc_fluxes_pbl_approx (config_flags, ss, l_master, l_dissip, du_dz, dv_dz, dthetav_dz, dqv_dz, &
+    subroutine Calc_fluxes_pbl_approx (config_flags, ss, l_master, l_boulac, du_dz, dv_dz, dthetav_dz, dqv_dz, &
               dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz, &
               t, qv, dn, dnw, fnm, fnp, dx, dy, dz, z_at_w, zx, zy, msftx, msfty, rdz, rdzw, cf1, cf2, cf3, dt, id, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts,    &
@@ -537,8 +540,7 @@
           dqc_dz, dqr_dz, dqi_dz, dqs_dz, dqg_dz, dqnc_dz, dqnr_dz, dqni_dz, dqnwfa_dz, dqnifa_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master
-      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: l_dissip
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: l_master, l_boulac
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out)   :: turb_flux_u2, &
           turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw,        &
           turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v,                  &
@@ -568,20 +570,20 @@
 
         ! Calculate q_sq (level 2) or Fill q_sq with prognostic q_sq (level 2.5)
       if ( config_flags%pbl3d_prog .eq. 0 ) then   ! level 2 model
-        call Prep_for_fluxes_l2 (config_flags, q_sq, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, du_dz, dv_dz, &
-            dthetav_dz, dqv_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+        call Prep_for_fluxes_l2_pbl_approx (config_flags, q_sq, l_master, l_boulac, rif, sm, sh, du_dz, dv_dz, &
+            dthetav_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       else if ( config_flags%pbl3d_prog .gt. 0 ) then   ! level 2.5 model
-        call Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, &
-            du_dz, dv_dz, dthetav_dz, dqv_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+        call Prep_for_fluxes_l2p5_pbl_approx (config_flags, q_sq, q_sq_prog, l_master, l_boulac, rif, sm_l2, sh_l2, sm, sh, &
+            q_ratio, q_sq_hl88, du_dz, dv_dz, dthetav_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
         ! Diagnose master length scale at faces
       if (config_flags%pbl3d_l_opt < 3) then
         call Calc_l_master_algebra (config_flags%pbl3d_l_opt, q_sq, dz, rdzw, rmol, turb_flux_wtheta_v, dthetav_dz, l_master, &
-            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+            l_boulac, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       else
-        call Calc_l_boulac_master_algebra (q_sq, z_at_w, dz, t, dlu, dld, dls, dlk, l_master, l_dissip, &
+        call Calc_l_boulac_master_algebra (q_sq, z_at_w, dz, t, dlu, dld, dls, dlk, l_master, l_boulac, &
             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
@@ -629,8 +631,8 @@
     end subroutine Calc_fluxes_pbl_approx
 
 
-    subroutine Prep_for_fluxes_l2 (config_flags, q_sq, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, du_dz, dv_dz, &
-              dthetav_dz, dqv_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+    subroutine Prep_for_fluxes_l2_pbl_approx (config_flags, q_sq, l_master, l_boulac, rif, sm, sh, du_dz, dv_dz, &
+              dthetav_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                    !
@@ -639,6 +641,7 @@
       ! Author: Timothy W. Juliano                                         !
       !                                                                    !
       ! Comments: Stability functions and q_sq are calculated at the faces !
+      !           The q_sq equation is for the PBL approximation           !
       !                                                                    !
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -646,26 +649,27 @@
 
       type (grid_config_rec_type),                 intent (in)    :: config_flags
 
-      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
-      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master, l_boulac
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm, sh
       integer, intent (in)    :: id
       integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
                                  ims, ime, jms, jme, kms, kme, &
                                  its, ite, jts, jte, kts, kte
 
         ! local vars
-      character (4) :: my_level, mass_or_face
-
-      mass_or_face = 'face'
+      real, dimension (its:ite, kts:kte, jts:jte) :: l_dissip
+      character (4) :: my_level
 
       my_level = 'l2'
         ! Calc stability functions for level 2 model
-      call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+      call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
-      call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+      call Fill_dissip_length_scale (config_flags%pbl3d_l_opt, l_master, l_boulac, l_dissip, &
+          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      call Calc_q_sq_l2_pbl_approx (l_master=l_master, l_dissip=l_dissip, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
           jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
           jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
         ! Relax q_sq at the boundaries (only for parent domain and specified B.C. runs)
@@ -673,11 +677,11 @@
         call Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
-    end subroutine Prep_for_fluxes_l2
+    end subroutine Prep_for_fluxes_l2_pbl_approx
 
 
-    subroutine Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88, &
-              du_dz, dv_dz, dthetav_dz, dqv_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+    subroutine Prep_for_fluxes_l2p5_pbl_approx (config_flags, q_sq, q_sq_prog, l_master, l_boulac, rif, sm_l2, sh_l2, sm, sh, &
+              q_ratio, q_sq_hl88, du_dz, dv_dz, dthetav_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
               ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -689,6 +693,7 @@
       ! Author: Timothy W. Juliano                                                !
       !                                                                           !
       ! Comments: Stability functions and q_sq are calculated at the faces        !
+      !           The q_sq equation is for the PBL approximation                  !
       !                                                                           !
       ! References: Helfand and Labraga (1988, JAS)                               !
       !                                                                           !
@@ -700,10 +705,10 @@
 
       real, dimension (kms:kme),                   intent (in)    :: dn, dnw, fnm, fnp
       real,                                        intent (in)    :: cf1, cf2, cf3
-      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz, dqv_dz
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
-      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master, l_boulac
       real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
       integer, intent (in)    :: id
       integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
@@ -711,17 +716,18 @@
                                  its, ite, jts, jte, kts, kte
 
         ! local vars
+      real, dimension (its:ite, kts:kte, jts:jte) :: l_dissip
       logical, parameter :: use_hl88 = .true.
-      character (4) :: my_level, mass_or_face
-
-      mass_or_face = 'face'
+      character (4) :: my_level
 
       if (use_hl88) then   ! calc sm and sh then q_sq for level 2 model to prepare for HL88 fix
         my_level = 'l2'
-        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+        call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
             ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
             its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
-        call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+        call Fill_dissip_length_scale (config_flags%pbl3d_l_opt, l_master, l_boulac, l_dissip, &
+            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+        call Calc_q_sq_l2_pbl_approx (l_master=l_master, l_dissip=l_dissip, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
             jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
             jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, sm=sm_l2, rif=rif)
       end if
@@ -729,14 +735,14 @@
           ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       my_level = 'l2p5'
         ! Calc stability functions for level 2.5 model
-      call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+      call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
         jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, &
         kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
 
-    end subroutine Prep_for_fluxes_l2p5
+    end subroutine Prep_for_fluxes_l2p5_pbl_approx
 
 
-    subroutine Calc_fluxes (config_flags, id, specified, q_sq, q_sq_prog, l_master, l_dissip, du_dx, du_dy, du_dz, dv_dx, dv_dy,  &
+    subroutine Calc_fluxes (config_flags, id, specified, q_sq, q_sq_prog, l_master, l_boulac, du_dx, du_dy, du_dz, dv_dx, dv_dy,  &
         dv_dz, dw_dx, dw_dy, dw_dz, dthetav_dx, dthetav_dy, dthetav_dz, dqv_dx, dqv_dy, &
         dqv_dz, turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw,   &
         turb_flux_vw, turb_flux_utheta_v, turb_flux_vtheta_v, turb_flux_wtheta_v,       &
@@ -776,8 +782,7 @@
                                                                      turb_flux_utheta, turb_flux_vtheta,       &
                                                                      turb_flux_wtheta, turb_flux_uqv,          &
                                                                      turb_flux_vqv, turb_flux_wqv,             &
-                                                                     q_sq, l_master
-      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: l_dissip
+                                                                     q_sq, l_master, l_boulac
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: u, v, rho, t, thetav, qv
       real, dimension (ims:ime, jms:jme),          intent (in)    :: ust, hfx, qfx, rmol
@@ -795,7 +800,7 @@
       real (kind = SOLVER_PREC) :: tf_utv, tf_vtv, tf_wtv, tf_uqv, tf_vqv, tf_wqv
 
       logical, parameter :: use_hl88 = .true.
-      character (4) :: my_level, mass_or_face
+      character (4) :: my_level
 
         ! Define dimensions
       i_start = its
@@ -804,46 +809,37 @@
       j_end = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      mass_or_face = 'face'
-
         ! Calculate q_sq (level 2) or Fill q_sq with prognostic q_sq (level 2.5)
+        ! Full 3D level 2 model is unstable right now
+!      if ( config_flags%pbl3d_prog .eq. 0 ) then   ! level 2 model
+!        call Prep_for_fluxes_l2 (config_flags, q_sq, l_master, l_boulac, rif, sm, sh, du_dx, dv_dy, dw_dz, &
+!            du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz, turb_flux_u2, turb_flux_v2, turb_flux_w2, &
+!            turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, id, ids, ide, jds, jde, kds, kde, &
+!            ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+!      else if ( config_flags%pbl3d_prog .gt. 0 ) then   ! level 2.5 model
+!        call Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, l_boulac, rif, sm_l2, sh_l2, sm, sh, &
+!            q_ratio, q_sq_hl88, du_dx, dv_dy, dw_dz, du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz, &
+!            turb_flux_u2, turb_flux_v2, turb_flux_w2, turb_flux_uv, turb_flux_uw, turb_flux_vw, turb_flux_wtheta_v, &
+!            id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+!            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+!      end if
+
+        ! Calling level 2 model PBL approx for now
       if ( config_flags%pbl3d_prog .eq. 0 ) then   ! level 2 model
-        my_level = 'l2'
-        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-           ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-           its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
-        call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
-          ! Relax q_sq at the boundaries (only for parent domain and specified B.C. runs)
-        if ( id .eq. 1 .and. config_flags%specified) then
-          call Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-        end if
+        call Prep_for_fluxes_l2_pbl_approx (config_flags, q_sq, l_master, l_boulac, rif, sm, sh, du_dz, dv_dz, &
+            dthetav_dz, id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       else if ( config_flags%pbl3d_prog .gt. 0 ) then   ! level 2.5 model
-        if (use_hl88) then   ! calc sm and sh then q_sq for level 2 model to prepare for HL88 fix
-          my_level = 'l2'
-          call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-              ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
-              its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
-          call Calc_q_sq_l2_pbl_approx (mass_or_face=mass_or_face, l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
-              ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
-              jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, sm=sm_l2, rif=rif)
-        end if
-        call Fill_q_sq_with_q_sq_prog (q_sq_prog, q_sq, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
-            ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
-        my_level = 'l2p5'
-          ! Calc stability functions for level 2.5 model
-        call Calc_sm_sh_l2_or_l2p5 (mass_or_face=mass_or_face, my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
-          jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, &
-          kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
+        call Prep_for_fluxes_l2p5_pbl_approx (config_flags, q_sq, q_sq_prog, l_master, l_boulac, rif, sm_l2, sh_l2, sm, sh, &
+            q_ratio, q_sq_hl88, du_dz, dv_dz, dthetav_dz, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
         ! Diagnose master length scale at faces
       if (config_flags%pbl3d_l_opt < 3) then
         call Calc_l_master_algebra (config_flags%pbl3d_l_opt, q_sq, dz, rdzw, rmol, turb_flux_wtheta_v, dthetav_dz, l_master, &
-            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+            l_boulac, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       else
-        call Calc_l_boulac_master_algebra (q_sq, z_at_w, dz, t, dlu, dld, dls, dlk, l_master, l_dissip, &
+        call Calc_l_boulac_master_algebra (q_sq, z_at_w, dz, t, dlu, dld, dls, dlk, l_master, l_boulac, &
             ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
       end if
 
@@ -925,6 +921,168 @@
           turb_flux_wtheta, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
     end subroutine Calc_fluxes
+
+
+    subroutine Prep_for_fluxes_l2 (config_flags, q_sq, l_master, l_boulac, rif, sm, sh, du_dx, dv_dy, dw_dz, &
+              du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz, tf_u2, tf_v2, tf_w2, tf_uv, tf_uw, tf_vw, tf_wtv, &
+              id, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                    !
+      ! Purpose: Calculate stability functions for q_sq diagnosis          !
+      !                                                                    !
+      ! Author: Timothy W. Juliano                                         !
+      !                                                                    !
+      ! Comments: Stability functions and q_sq are calculated at the faces !
+      !           The q_sq equation is for the full 3D model               !
+      !                                                                    !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      type (grid_config_rec_type),                 intent (in)    :: config_flags
+
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dx, dv_dy, dw_dz, &
+                                    du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: tf_u2, tf_v2, tf_w2, &
+                                                            tf_uv, tf_uw, tf_vw, tf_wtv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master, l_boulac
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm, sh
+      integer, intent (in)    :: id
+      integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
+                                 ims, ime, jms, jme, kms, kme, &
+                                 its, ite, jts, jte, kts, kte
+
+        ! local vars
+      real, dimension (its:ite, kts:kte, jts:jte) :: l_dissip
+      character (4) :: my_level
+
+      my_level = 'l2'
+        ! Calc stability functions for level 2 model
+      call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+         ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+         its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
+      call Fill_dissip_length_scale (config_flags%pbl3d_l_opt, l_master, l_boulac, l_dissip, &
+          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      call Calc_q_sq_l2 (l_master=l_master, l_dissip=l_dissip, du_dx=du_dx, dv_dy=dv_dy, dw_dz=dw_dz, du_dy=du_dy, &
+          dv_dx=dv_dx, dw_dx=dw_dx, du_dz=du_dz, dw_dy=dw_dy, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+          tf_u2=tf_u2, tf_v2=tf_v2, tf_w2=tf_w2, tf_uv=tf_uv, tf_uw=tf_uw, tf_vw=tf_vw, tf_wtv=tf_wtv, &
+          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, rif=rif)
+        ! Relax q_sq at the boundaries (only for parent domain and specified B.C. runs)
+      if ( id .eq. 1 .and. config_flags%specified) then
+        call Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      end if
+
+    end subroutine Prep_for_fluxes_l2
+
+
+    subroutine Prep_for_fluxes_l2p5 (config_flags, q_sq, q_sq_prog, l_master, l_boulac, rif, sm_l2, sh_l2, sm, sh, &
+              q_ratio, q_sq_hl88, du_dx, dv_dy, dw_dz, du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz, &
+              tf_u2, tf_v2, tf_w2, tf_uv, tf_uw, tf_vw, tf_wtv, id, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                           !
+      ! Purpose: Calculate stability functions for q_sq diagnosis (level 2 model) !
+      !          so that we can apply HL88 realizability criterion                !
+      !          Also calculate stability functions for level 2.5 model           !
+      !                                                                           !
+      ! Author: Timothy W. Juliano                                                !
+      !                                                                           !
+      ! Comments: Stability functions and q_sq are calculated at the faces        !
+      !           The q_sq equation is for the full 3D model                      !
+      !                                                                           !
+      ! References: Helfand and Labraga (1988, JAS)                               !
+      !                                                                           !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      type (grid_config_rec_type),                 intent (in)    :: config_flags
+
+      real, dimension (kms:kme),                   intent (in)    :: dn, dnw, fnm, fnp
+      real,                                        intent (in)    :: cf1, cf2, cf3
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dx, dv_dy, dw_dz, &
+                                    du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: tf_u2, tf_v2, tf_w2, &
+                                                            tf_uv, tf_uw, tf_vw, tf_wtv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (inout) :: q_sq
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: q_sq_prog
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master, l_boulac
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: rif, sm_l2, sh_l2, sm, sh, q_ratio, q_sq_hl88
+      integer, intent (in)    :: id
+      integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
+                                 ims, ime, jms, jme, kms, kme, &
+                                 its, ite, jts, jte, kts, kte
+
+        ! local vars
+      real, dimension (its:ite, kts:kte, jts:jte) :: l_dissip
+      logical, parameter :: use_hl88 = .true.
+      character (4) :: my_level
+
+      if (use_hl88) then   ! calc sm and sh then q_sq for level 2 model to prepare for HL88 fix
+        my_level = 'l2'
+        call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+            ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm_l2, sh=sh_l2, rif=rif)
+        call Fill_dissip_length_scale (config_flags%pbl3d_l_opt, l_master, l_boulac, l_dissip, &
+            ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+        call Calc_q_sq_l2 (l_master=l_master, l_dissip=l_dissip, du_dx=du_dx, dv_dy=dv_dy, dw_dz=dw_dz, du_dy=du_dy, &
+            dv_dx=dv_dx, dw_dx=dw_dx, du_dz=du_dz, dw_dy=dw_dy, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+            tf_u2=tf_u2, tf_v2=tf_v2, tf_w2=tf_w2, tf_uv=tf_uv, tf_uw=tf_uw, tf_vw=tf_vw, tf_wtv=tf_wtv, &
+            ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
+            its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, q_sq_hl88=q_sq_hl88, rif=rif)
+      end if
+      call Fill_q_sq_with_q_sq_prog (q_sq_prog, q_sq, dn, dnw, fnm, fnp, cf1, cf2, cf3, &
+          ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+      my_level = 'l2p5'
+        ! Calc stability functions for level 2.5 model
+      call Calc_sm_sh_l2_or_l2p5 (my_level=my_level, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+        jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, jts=jts, jte=jte, &
+        kts=kts, kte=kte, sm_l2=sm_l2, sh_l2=sh_l2, sm=sm, sh=sh, q_sq=q_sq, q_sq_hl88=q_sq_hl88, q_ratio=q_ratio, l_master_at_face=l_master)
+
+    end subroutine Prep_for_fluxes_l2p5
+
+
+    subroutine Fill_dissip_length_scale (l_opt, l_master, l_boulac, l_dissip, &
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+
+      implicit none
+
+      integer,                                     intent (in)  :: l_opt
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)  :: l_master, l_boulac
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out) :: l_dissip
+
+      integer, intent (in) :: ids, ide, jds, jde, kds, kde, &
+                              ims, ime, jms, jme, kms, kme, &
+                              its, ite, jts, jte, kts, kte
+
+        ! Local vars
+      integer :: i, j, k, i_start, i_end, j_start, j_end
+      real :: l
+      logical, parameter :: DEBUG = .false.
+
+        ! Define dimensions
+      i_start = its
+      i_end = Min (ite, ide - 1)
+      j_start = jts
+      j_end = Min (jte, jde - 1)
+
+      do j = j_start, j_end
+        do k = kts, kte
+          do i = i_start, i_end
+            if (l_opt < 3) then
+              l_dissip(i, k, j) = l_master(i, k, j)
+            else
+              l_dissip(i, k, j) = l_boulac(i, k, j)
+            end if
+          end do
+        end do
+      end do
+
+    end subroutine Fill_dissip_length_scale
 
 
     subroutine Set_fluxes_to_min (q_sq, tf_u2, tf_v2, tf_w2, tf_uv, tf_uw, &
@@ -2312,7 +2470,7 @@
     end function Diag_xth_pbl_approx
 
 
-    subroutine Calc_sm_sh_l2_or_l2p5 (mass_or_face, my_level, du_dz, dv_dz, dthetav_dz, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, &
+    subroutine Calc_sm_sh_l2_or_l2p5 (my_level, du_dz, dv_dz, dthetav_dz, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, &
               kms, kme, its, ite, jts, jte, kts, kte, sm_l2, sh_l2, sm, sh, q_sq, q_sq_hl88, q_ratio, l_master_at_mass, l_master_at_face, rif)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -2325,7 +2483,6 @@
 
       implicit none
 
-      character (len = *), intent(in)                             :: mass_or_face
       character (len = *), intent(in)                             :: my_level
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz
       real, dimension (its:ite, kts:kte, jts:jte), intent (out)   :: sm, sh
@@ -2350,14 +2507,9 @@
       j_end = Min (jte, jde - 1)
 
       ktf = Min (kte, kde - 1)
+      k_start = kts + 1
 
       level: if (my_level == 'l2') then   ! level 2 model
-
-        if (mass_or_face == 'face') then
-          k_start = kts + 1
-        else
-          k_start = kts
-        end if
 
         j_loop_l2: do j = j_start, j_end
           k_loop_l2: do k = k_start, ktf
@@ -2399,10 +2551,8 @@
 
         do j = j_start, j_end
           do i = i_start, i_end
-            if (mass_or_face == 'face') then
-              sm(i, kts, j) = TURB_FLUX_MIN
-              sh(i, kts, j) = TURB_FLUX_MIN
-            end if
+            sm(i, kts, j) = TURB_FLUX_MIN
+            sh(i, kts, j) = TURB_FLUX_MIN
             sm(i, ktf + 1, j) = TURB_FLUX_MIN
             sh(i, ktf + 1, j) = TURB_FLUX_MIN
           end do
@@ -2488,12 +2638,12 @@
     end subroutine Calc_sm_sh_l2_or_l2p5
 
 
-    subroutine Calc_q_sq_l2_pbl_approx (mass_or_face, l_master, du_dz, dv_dz, dthetav_dz, ids, ide, jds, jde, kds, kde, &
+    subroutine Calc_q_sq_l2_pbl_approx (l_master, l_dissip, du_dz, dv_dz, dthetav_dz, ids, ide, jds, jde, kds, kde, &
               ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, q_sq_face, q_sq_hl88, sm, rif)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                                        !
-      ! Purpose: Calculates diagnostic TKE equation (level 2)                                  !
+      ! Purpose: Calculates diagnostic TKE equation (level 2) for PBL approximation            !
       !                                                                                        !
       ! Author: Timothy W. Juliano & Pedro A. Jimenez                                          !
       !                                                                                        !
@@ -2501,12 +2651,12 @@
 
       implicit none
 
-      character (len = *), intent(in)                             :: mass_or_face
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dz, dv_dz, dthetav_dz
       real, dimension (ims:ime, kms:kme, jms:jme), intent (out), optional :: q_sq_face
       real, dimension (its:ite, kts:kte, jts:jte), intent (out), optional :: q_sq_hl88
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: sm, rif
       real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: l_dissip
       integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
                                  ims, ime, jms, jme, kms, kme, &
                                  its, ite, jts, jte, kts, kte
@@ -2523,12 +2673,7 @@
       j_start = jts
       j_end = Min (jte, jde - 1)
 
-      if (mass_or_face == 'mass') then
-        kts1 = kts
-      else
-        kts1 = kts + 1
-      end if
-
+      kts1 = kts + 1
       ktf = Min (kte, kde - 1)
 
       j_loop: do j = j_start, j_end
@@ -2558,9 +2703,7 @@
         ! Zero q_sq at the suface and top
       do j = j_start, j_end
         do i = i_start, i_end
-          if (mass_or_face == 'face') then
-            q_sq(i, kts, j) = Q_SQ_MIN
-          end if
+          q_sq(i, kts, j) = Q_SQ_MIN
           q_sq(i, ktf + 1, j) = Q_SQ_MIN
         end do
       end do
@@ -2600,7 +2743,7 @@
             print *, 'du_dz = ', du_dz(i, k, j)
             print *, 'dv_dz = ', dv_dz(i, k, j)
             print *, 'dthetav_dz = ', dthetav_dz(i, k, j)
-            print *, 'l master = ', l_master(i, k, j)
+            print *, 'l dissip = ', l_dissip(i, k, j)
             print *, 'Ri = ', ri
             print *, 'Ri flux = ', rif(i, k, j)
             print *, 'sm = ', sm(i, k, j)
@@ -2609,6 +2752,125 @@
         end subroutine Debug_big_qsq
 
     end subroutine Calc_q_sq_l2_pbl_approx
+
+
+    subroutine Calc_q_sq_l2 (l_master, l_dissip, du_dx, dv_dy, dw_dz, du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz, &
+              tf_u2, tf_v2, tf_w2, tf_uv, tf_uw, tf_vw, tf_wtv, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, &
+              its, ite, jts, jte, kts, kte, q_sq_face, q_sq_hl88, rif)
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !                                                                                        !
+      ! Purpose: Calculates diagnostic TKE equation (level 2) for full 3D model                !
+      !                                                                                        !
+      ! Author: Timothy W. Juliano & Pedro A. Jimenez                                          !
+      !                                                                                        !
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+      implicit none
+
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: du_dx, dv_dy, dw_dz, &
+                                    du_dy, dv_dx, dw_dx, du_dz, dw_dy, dv_dz, dthetav_dz
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: tf_u2, tf_v2, tf_w2, tf_uv, tf_uw, tf_vw, tf_wtv
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (out), optional :: q_sq_face
+      real, dimension (its:ite, kts:kte, jts:jte), intent (out), optional :: q_sq_hl88
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: rif
+      real, dimension (ims:ime, kms:kme, jms:jme), intent (in)    :: l_master
+      real, dimension (its:ite, kts:kte, jts:jte), intent (in)    :: l_dissip
+      integer, intent (in)    :: ids, ide, jds, jde, kds, kde, &
+                                 ims, ime, jms, jme, kms, kme, &
+                                 its, ite, jts, jte, kts, kte
+
+        ! local vars
+      integer :: i, j, k, i_start, i_end, j_start, j_end, kts1, ktf
+      real :: ri, turb_prtl_num, q
+      real, dimension (its:ite, kts:kte, jts:jte) :: q_sq
+      logical, parameter :: DEBUG = .false.
+
+        ! Define dimensions
+      i_start = its
+      i_end = Min (ite, ide - 1)
+      j_start = jts
+      j_end = Min (jte, jde - 1)
+
+      kts1 = kts + 1
+      ktf = Min (kte, kde - 1)
+
+      j_loop: do j = j_start, j_end
+        k_loop: do k = kts1, ktf
+          i_loop: do i = i_start, i_end
+
+            if_turb: if (rif(i, k, j) < rif_c) then
+
+              q = b_1 * l_master(i, k, j) * (- tf_u2(i, k, j) * du_dx(i, k, j) - tf_v2(i, k, j) * dv_dy(i, k, j) &
+                      - tf_w2(i, k, j) * dw_dz(i, k, j) - tf_uv(i, k, j) * (du_dy(i, k, j) + dv_dx(i, k, j)) &
+                      - tf_uw(i, k, j) * (du_dz(i, k, j) + dw_dx(i, k, j)) &
+                      - tf_vw(i, k, j) * (dv_dz(i, k, j) + dw_dy(i, k, j)) + tf_wtv(i, k, j) * G_OVER_TREF)
+              q = q ** 1./3.
+              q_sq(i, k, j) = Max (q * q, Q_SQ_MIN)
+
+              if (DEBUG) call Debug_big_qsq
+
+            else
+
+              q_sq(i, k, j) = Q_SQ_MIN
+
+            end if if_turb
+
+          end do i_loop
+        end do k_loop
+      end do j_loop
+
+        ! Zero q_sq at the suface and top
+      do j = j_start, j_end
+        do i = i_start, i_end
+          q_sq(i, kts, j) = Q_SQ_MIN
+          q_sq(i, ktf + 1, j) = Q_SQ_MIN
+        end do
+      end do
+
+      if (PRESENT(q_sq_face)) then
+
+        do j = j_start, j_end
+          do k = kts, ktf + 1
+            do i = i_start, i_end
+              q_sq_face(i, k, j) = q_sq(i, k, j)
+            end do
+          end do
+        end do
+
+      end if
+
+      if (PRESENT(q_sq_hl88)) then
+
+        do j = j_start, j_end
+          do k = kts, ktf + 1
+            do i = i_start, i_end
+              q_sq_hl88(i, k, j) = q_sq(i, k, j)
+            end do
+          end do
+        end do
+
+      end if
+
+      contains
+
+        subroutine Debug_big_qsq
+
+          if (q_sq(i, k, j) > 20.0) then
+            print *, '-----------------------------'
+            print *, 'i, k, j = ', i, k, j
+            print *, 'q_sq = ', q_sq(i, k, j)
+            print *, 'du_dz = ', du_dz(i, k, j)
+            print *, 'dv_dz = ', dv_dz(i, k, j)
+            print *, 'dthetav_dz = ', dthetav_dz(i, k, j)
+            print *, 'l dissip = ', l_dissip(i, k, j)
+            print *, 'Ri = ', ri
+            print *, 'Ri flux = ', rif(i, k, j)
+          end if
+
+        end subroutine Debug_big_qsq
+
+    end subroutine Calc_q_sq_l2
 
 
     subroutine Taper_q_sq (q_sq, ids, jds, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
@@ -3000,7 +3262,7 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !        ! Calc stability functions
-!      call Calc_sm_sh_l2_or_l2p5 (mass_or_face='face', my_level='l2', du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
+!      call Calc_sm_sh_l2_or_l2p5 (my_level='l2', du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, &
 !          ids=ids, ide=ide, jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, &
 !          its=its, ite=ite, jts=jts, jte=jte, kts=kts, kte=kte, sm=sm, sh=sh, rif=rif)
 
@@ -3013,7 +3275,7 @@
 
 !      do init_iter = 1, 2
 !          ! Calc q_sq
-!        call Calc_q_sq_l2_pbl_approx (mass_or_face='face', l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
+!        call Calc_q_sq_l2_pbl_approx (l_master=l_master, du_dz=du_dz, dv_dz=dv_dz, dthetav_dz=dthetav_dz, ids=ids, ide=ide, &
 !            jds=jds, jde=jde, kds=kds, kde=kde, ims=ims, ime=ime, jms=jms, jme=jme, kms=kms, kme=kme, its=its, ite=ite, &
 !            jts=jts, jte=jte, kts=kts, kte=kte, q_sq_face=q_sq, sm=sm, rif=rif)
 
