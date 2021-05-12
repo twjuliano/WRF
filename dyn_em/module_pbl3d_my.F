@@ -485,10 +485,11 @@
           end do
 
           do k = kts, kte
-            dld(i, k, j) = min( dld(i, k, j), z(i, k, j) )
+            dlu(i, k, j) = max( dlu(i, k, j), 0.0 )
+            dld(i, k, j) = max( min( dld(i, k, j), z(i, k, j) ), 0.0 )
             dls(i, k, j) = max( sqrt( dlu(i, k, j) * dld(i, k, j) ), 0.1 )
             dlk(i, k, j) = min( dlu(i, k, j), dld(i, k, j) )
-            l_master(i, k, j) = max( dlk(i, k, j), 0.0 )
+            l_master(i, k, j) = dlk(i, k, j)
             l_dissip(i, k, j) = dls(i, k, j)
           end do
         end do
