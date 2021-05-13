@@ -504,6 +504,10 @@ BENCH_START(tke_diff_bc_tim)
          !$OMP END PARALLEL DO
 BENCH_END(tke_diff_bc_tim)
 
+         END IF
+
+         IF (config_flags%diff_opt .eq. 2 .OR. config_flags%diff_opt .eq. 1) THEN
+
 BENCH_START(deform_div_tim)
 
          !$OMP PARALLEL DO   &
