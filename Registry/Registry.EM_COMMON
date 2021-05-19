@@ -336,6 +336,7 @@ state    real   ht_coarse       ij     misc        1   -     r                - 
 # TKE
 state    real   tke            ikj     dyn_em      2         -       r        "tke"          "TURBULENCE KINETIC ENERGY"     "m2 s-2"
 i1       real   tke_tend       ikj     dyn_em      1         -      
+state    real   tf_wth         ikj     dyn_em      1         Z      irh       "tf_wth"       "LES turbulent flux wth"        "m K s-1"
 
 # variables in 3DTKE scheme (km_opt=5)
 state    real  nlflux          ikj     dyn_em        1         Z      -      "NLFLUX"          "PRESCRIBED NONLOCAL HEAT FLUX IN 3DTKE SCHEME"         "K m s-1"

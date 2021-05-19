@@ -1027,6 +1027,7 @@ BENCH_START(vert_diff_tim)
                                       nba_mij, num_nba_mij,          & !JDM
                                       grid%div, moist, chem, scalar,tracer,         &
                                       grid%xkmv, grid%xkhv, grid%xkmh, config_flags%km_opt,       & ! xkmh added Oct2013
+                                      grid%tf_wth, &
                                       grid%fnm, grid%fnp, grid%dn, grid%dnw, grid%rdz, grid%rdzw, &
                                       grid%hfx, grid%qfx, grid%ustm, grid%rho,   &
                                       ids, ide, jds, jde, kds, kde,              &
