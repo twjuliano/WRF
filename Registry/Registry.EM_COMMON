@@ -1232,6 +1232,8 @@ rconfig  integer   pbl3d_nsteps         namelist,dynamics    max_domains      1 
 rconfig  integer   pbl3d_prog           namelist,dynamics    max_domains      0      -     "pbl3d_prog"           "PBL3D prognostic TKE" ""
 rconfig  integer   pbl3d_scalar_mix     namelist,dynamics    max_domains      0      -     "pbl3d_scalar_mix"     "PBL3D scalar turbulent mixing" ""
 rconfig  integer   flux_limiter_w       namelist,dynamics    max_domains      0      -     "flux_limiter_w"       "Flux limiter on vertical advection of w" ""
+rconfig  real      hfx_opt              namelist,physics     max_domains     200     -     "hfx_opt"              "heat flux for pedros scheme"
+rconfig  real      znt_opt              namelist,physics     max_domains     0.1     -     "znt_opt"              "roughness length for pedros scheme"
 
 #FogDES variables
 state   real   fgdp             ij     misc        1         -      -        "fgdp"                "Accumulated fog deposition"    "mm"
@@ -2033,7 +2035,7 @@ state    real  CDA              ij      misc        1         -      r        "C
 state    real  UST              ij      misc        1         -      rh       "UST"                   "U* IN SIMILARITY THEORY"                      "m s-1"      
 state    real  USTM             ij      misc        1         -      r        "USTM"                  "U* IN SIMILARITY THEORY WITHOUT VCONV"        "m s-1"
 i1       real  HOL              ij      misc        1         -      -        "HOL"                   "PBL HEIGHT OVER MONIN-OBUKHOV LENGTH"         ""
-state    real  RMOL             ij      misc        1         -      r        "RMOL"                  "1./Monin Ob. Length"                      ""
+state    real  RMOL             ij      misc        1         -      rh       "RMOL"                  "1./Monin Ob. Length"                      ""
 state    real  MOL              ij      misc        1         -      r        "MOL"                   "T* IN SIMILARITY THEORY"                      "K"      
 state    real  PBLH             ij      misc        1         -      rh       "PBLH"                  "PBL HEIGHT"         "m"      
 state    real  CAPG             ij      misc        1         -      r        "CAPG"                  "HEAT CAPACITY FOR SOIL"                       "J K-1 m-3"      

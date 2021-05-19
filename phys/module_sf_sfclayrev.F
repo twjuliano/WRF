@@ -21,6 +21,7 @@ CONTAINS
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
                      P1000mb,                                      &
+                     hfx_opt, znt_opt,                             &
                      ids,ide, jds,jde, kds,kde,                    &
                      ims,ime, jms,jme, kms,kme,                    &
                      its,ite, jts,jte, kts,kte,                    &
@@ -190,6 +191,8 @@ CONTAINS
 
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX, IZ0TLND
       INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
+
+      REAL, INTENT(IN ) :: HFX_OPT, ZNT_OPT
 ! LOCAL VARS
 
       REAL,     DIMENSION( its:ite ) ::                       U1D, &
@@ -213,6 +216,9 @@ CONTAINS
            QV1D(i)=QV3D(i,1,j)
            P1D(i) =P3D(i,1,j)
            T1D(i) =T3D(i,1,j)
+
+           ZNT(I,J)=znt_opt
+           HFX(I,J)=hfx_opt
         ENDDO
 
         !  Sending array starting locations of optional variables may cause
@@ -486,11 +492,11 @@ CONTAINS
         GZ1OZ0(I)=ALOG((ZA(I)+ZNT(I))/ZNT(I))   ! log((z+z0)/z0)                                     
         GZ2OZ0(I)=ALOG((2.+ZNT(I))/ZNT(I))      ! log((2+z0)/z0)                           
         GZ10OZ0(I)=ALOG((10.+ZNT(I))/ZNT(I))    ! log((10+z0)z0)                    
-        IF((XLAND(I)-1.5).GE.0)THEN                                            
+!        IF((XLAND(I)-1.5).GE.0)THEN                                            
           ZL=ZNT(I)                                                            
-        ELSE                                                                     
-          ZL=0.01                                                                
-        ENDIF                                                                    
+!        ELSE                                                                     
+!          ZL=0.01                                                                
+!        ENDIF                                                                    
         WSPD(I)=SQRT(UX(I)*UX(I)+VX(I)*VX(I))                        
 
         TSKV=THGB(I)*(1.+EP1*QSFC(I))                     
@@ -686,11 +692,11 @@ CONTAINS
        PSIT=GZ1OZ0(I)-PSIH(I)
        PSIT2=GZ2OZ0(I)-PSIH2(I)
 !
-        IF((XLAND(I)-1.5).GE.0)THEN                                            
+!        IF((XLAND(I)-1.5).GE.0)THEN                                            
           ZL=ZNT(I)                                                            
-        ELSE                                                                     
-          ZL=0.01                                                                
-        ENDIF                                                                    
+!        ELSE                                                                     
+!          ZL=0.01                                                                
+!        ENDIF                                                                    
 !
         PSIQ=ALOG(KARMAN*UST(I)*ZA(I)/XKA+ZA(I)/ZL)-pq(I)
         PSIQ2=ALOG(KARMAN*UST(I)*2./XKA+2./ZL)-pq2(I)
@@ -960,7 +966,7 @@ CONTAINS
       ENDIF
       DO i=its,ite
         QFX(i)=0.                                                              
-        HFX(i)=0.                                                              
+!        HFX(i)=0.                                                              
       ENDDO
   350 CONTINUE                                                                   
 
@@ -969,38 +975,38 @@ CONTAINS
 !-----OVER WATER, ALTER ROUGHNESS LENGTH (ZNT) ACCORDING TO WIND (UST).          
                                                                                  
       DO 360 I=its,ite
-        IF((XLAND(I)-1.5).GE.0)THEN                                            
+!        IF((XLAND(I)-1.5).GE.0)THEN                                            
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
-          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+!          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
 ! V3.9: Add limit as in isftcflx = 1,2
-          ZNT(I)=MIN(ZNT(I),2.85e-3)
+!          ZNT(I)=MIN(ZNT(I),2.85e-3)
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
 !         CZC = min(CZC,0.028)
 !         ZNT(I)=CZC*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
 ! AHW: change roughness length, and hence the drag coefficients Ck and Cd
-          IF ( PRESENT(ISFTCFLX) ) THEN
-             IF ( ISFTCFLX.NE.0 ) THEN
+!          IF ( PRESENT(ISFTCFLX) ) THEN
+!             IF ( ISFTCFLX.NE.0 ) THEN
 !               ZNT(I)=10.*exp(-9.*UST(I)**(-.3333))
 !               ZNT(I)=10.*exp(-9.5*UST(I)**(-.3333))
 !               ZNT(I)=ZNT(I) + 0.11*1.5E-5/AMAX1(UST(I),0.01)
 !               ZNT(I)=0.011*UST(I)*UST(I)/G+OZO
 !               ZNT(I)=MAX(ZNT(I),3.50e-5)
 ! AHW 2012:
-                ZW  = MIN((UST(I)/1.06)**(0.3),1.0)
-                ZN1 = 0.011*UST(I)*UST(I)/G + OZO
-                ZN2 = 10.*exp(-9.5*UST(I)**(-.3333)) + &
-                       0.11*1.5E-5/AMAX1(UST(I),0.01)
-                ZNT(I)=(1.0-ZW) * ZN1 + ZW * ZN2
-                ZNT(I)=MIN(ZNT(I),2.85e-3)
-                ZNT(I)=MAX(ZNT(I),1.27e-7)
-             ENDIF
-          ENDIF
+!                ZW  = MIN((UST(I)/1.06)**(0.3),1.0)
+!                ZN1 = 0.011*UST(I)*UST(I)/G + OZO
+!                ZN2 = 10.*exp(-9.5*UST(I)**(-.3333)) + &
+!                       0.11*1.5E-5/AMAX1(UST(I),0.01)
+!                ZNT(I)=(1.0-ZW) * ZN1 + ZW * ZN2
+!                ZNT(I)=MIN(ZNT(I),2.85e-3)
+!                ZNT(I)=MAX(ZNT(I),1.27e-7)
+!             ENDIF
+!          ENDIF
           ZL = ZNT(I)
-        ELSE
-          ZL = 0.01
-        ENDIF                                                                    
+!        ELSE
+!          ZL = 0.01
+!        ENDIF                                                                    
         FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/DENOMQ(I)
 !       FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/(   &
 !               ALOG(KARMAN*UST(I)*ZA(I)/XKA+ZA(I)/ZL)-PSIH(I))
@@ -1024,37 +1030,58 @@ CONTAINS
      ENDIF
 
       DO 370 I=its,ite
-        QFX(I)=FLQC(I)*(QSFC(I)-QX(I))                                     
-        QFX(I)=AMAX1(QFX(I),0.)                                            
+        QFX(I)=0. ! FLQC(I)*(QSFC(I)-QX(I))                                     
+        QFX(I)=0. ! AMAX1(QFX(I),0.)                                            
         LH(I)=XLV*QFX(I)
   370 CONTINUE                                                                 
                                                                                 
 !-----COMPUTE SURFACE HEAT FLUX:                                                 
 !                                                                                
-  390 CONTINUE                                                                 
-      DO 400 I=its,ite
-        IF(XLAND(I)-1.5.GT.0.)THEN                                           
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I)) 
+  390 CONTINUE
+!      ! To replicate PAJ simulations !
+!      DO 400 I=its,ite
+!        IF(I .GT. (ids+ide)/2.)THEN
+!          HFX(I)=320.
+!        ELSE
+!          HFX(I)=160.
+!        ENDIF
+
+!!      ! TWJ homogeneous hfx !
+!      DO 400 I=its,ite
+!          HFX(I)=285.
+ 
+!!      ! TWJ heterogeneous hfx !
+!!      DO 400 I=its,ite
+!!        IF(I .GT. (ids+ide)/2.)THEN
+!!          HFX(I)=279.
+!!        ELSE
+!!          HFX(I)=139.5
+!!        ENDIF
+
+      ! Original code !
+!!      DO 400 I=its,ite
+!!        IF(XLAND(I)-1.5.GT.0.)THEN                                           
+!!          HFX(I)=FLHC(I)*(THGB(I)-THX(I)) 
 !         IF ( PRESENT(ISFTCFLX) ) THEN
 !            IF ( ISFTCFLX.NE.0 ) THEN
 ! AHW: add dissipative heating term (commented out in 3.6.1)
 !               HFX(I)=HFX(I)+RHOX(I)*USTM(I)*USTM(I)*WSPDI(I)
 !            ENDIF
 !         ENDIF 
-        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
-          HFX(I)=AMAX1(HFX(I),-250.)                                       
-        ENDIF                                                                  
+!!        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
+!!          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
+!!          HFX(I)=AMAX1(HFX(I),-250.)                                       
+!!        ENDIF                                                                  
   400 CONTINUE                                                                 
 
   405 CONTINUE                                                                 
          
       DO I=its,ite
-         IF((XLAND(I)-1.5).GE.0)THEN
+!         IF((XLAND(I)-1.5).GE.0)THEN
            ZL=ZNT(I)
-         ELSE
-           ZL=0.01
-         ENDIF
+!         ELSE
+!           ZL=0.01
+!         ENDIF
 !v3.1.1
 !         CHS(I)=UST(I)*KARMAN/(ALOG(KARMAN*UST(I)*ZA(I) &
 !                /XKA+ZA(I)/ZL)-PSIH(I))

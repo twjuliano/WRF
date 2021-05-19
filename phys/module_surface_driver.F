@@ -33,6 +33,7 @@ CONTAINS
      &          ,t_phy,u10,udrunoff,ust,uz0                           &
      &          ,u_frame,u_phy,v10,vegfra,u10e,v10e,uoce,voce         &
      &          ,vz0,v_frame,v_phy,warm_rain,wspd,xice,xland,z,znt    &
+     &          ,hfx_opt, znt_opt                                     & !!! TWJ
      &          ,max_edom,cplmask                                     &
 #if (HWRF==1)
      &          ,mznt                                                 &
@@ -1444,6 +1445,8 @@ CONTAINS
   real,  intent(inout),optional :: fsi240(ims:ime,1:maxpatch,jms:jme)
   real,  intent(inout),optional :: laip(ims:ime,1:maxpatch,jms:jme)
 
+  real, intent (in) :: hfx_opt, znt_opt !!! TWJ
+
 !------------------------------------------------------------------
    CHARACTER*256 :: message
    REAL    :: next_bl_time
@@ -2107,6 +2110,7 @@ CONTAINS
                  gz1oz0,wspd,br,isfflx,dx,                           &
                  svp1,svp2,svp3,svpt0,ep_1,ep_2,karman,eomeg,stbolt, &
                  P1000mb,                                            &
+                 hfx_opt, znt_opt,                                   & !!! TWJ
                  XICE,SST,TSK_SEA,                                                  &
                  CHS2_SEA,CHS_SEA,CPM_SEA,CQS2_SEA,FLHC_SEA,FLQC_SEA,               &
                  HFX_SEA,LH_SEA,QFX_SEA,QGH_SEA,QSFC_SEA,ZNT_SEA,                   &
@@ -2125,6 +2129,7 @@ CONTAINS
                gz1oz0,wspd,br,isfflx,dx,                           &
                svp1,svp2,svp3,svpt0,ep_1,ep_2,karman,eomeg,stbolt, &
                P1000mb,                                            &
+               hfx_opt, znt_opt,                                   & !!! TWJ
                ids,ide, jds,jde, kds,kde,                          &
                ims,ime, jms,jme, kms,kme,                          &
                i_start(ij),i_end(ij), j_start(ij),j_end(ij), kts,kte,    &
@@ -5840,6 +5845,7 @@ CONTAINS
                      SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                      KARMAN,EOMEG,STBOLT,                          &
                      P1000,                                      &
+                     hfx_opt, znt_opt,                                   & !!! TWJ
                      XICE,SST,TSK_SEA,                                                  &
                      CHS2_SEA,CHS_SEA,CPM_SEA,CQS2_SEA,FLHC_SEA,FLQC_SEA,               &
                      HFX_SEA,LH_SEA,QFX_SEA,QGH_SEA,QSFC_SEA,ZNT_SEA,                   &
@@ -5925,6 +5931,8 @@ CONTAINS
 
      INTEGER,  OPTIONAL,  INTENT(IN )   ::     ISFTCFLX,IZ0TLND
      INTEGER,  OPTIONAL,  INTENT(IN )   ::     SCM_FORCE_FLUX
+
+     real, intent (in) :: hfx_opt, znt_opt !!! TWJ
 
 !--------------------------------------------------------------------
 !    New for wrapper
@@ -6096,6 +6104,7 @@ CONTAINS
                  SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                  KARMAN,EOMEG,STBOLT,                          &
                  P1000,                                      &
+                 hfx_opt, znt_opt,                             & !!! TWJ
                  ids,ide, jds,jde, kds,kde,                    &
                  ims,ime, jms,jme, kms,kme,                    &
                  its,ite, jts,jte, kts,kte,                    &
@@ -6188,6 +6197,7 @@ CONTAINS
                  SVP1,SVP2,SVP3,SVPT0,EP1,EP2,                 &
                  KARMAN,EOMEG,STBOLT,                          &
                  P1000,                                      &
+                 hfx_opt, znt_opt,                             & !!! TWJ
                  ids,ide, jds,jde, kds,kde,                    &
                  ims,ime, jms,jme, kms,kme,                    &
                  its,ite, jts,jte, kts,kte,                    & ! 0

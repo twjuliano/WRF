@@ -271,10 +271,11 @@ CONTAINS
 
   CASE (les)
   !  FOR LES, set stretch to false
-   stretch_grid = .false.
+   stretch_grid = .true.
    delt = 3.
 !   z_scale = .40
-   z_scale = 8000./config_flags%ztop  ! not used if stretch_grid = .false.
+!   z_scale = 8000./config_flags%ztop  ! not used if stretch_grid = .false.
+   z_scale = 2.4
    pi = 2.*asin(1.0)
    write(6,*) ' pi is ',pi
    nxc = (ide-ids)/2
@@ -1398,7 +1399,7 @@ CONTAINS
         RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
         IF(RAD <= 1.) THEN
 !          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.1 *randx
+           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.5 *randx
            grid%t_2(i,k,j)=grid%t_1(i,k,j)
            qvf = 1. + rvovrd*moist(i,k,j,P_QV)
            grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
