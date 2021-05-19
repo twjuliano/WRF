@@ -4014,6 +4014,7 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                     div,                                      &
                                     moist,chem,scalar,tracer,                 &
                                     xkmv,xkhv,xkmh,km_opt,                    & ! xkmh added
+                                    tf_wth,                                   &
                                     fnm, fnp, dn, dnw, rdz, rdzw,             &
                                     hfx, qfx, ust, rho,                       &
                                     ids, ide, jds, jde, kds, kde,             &
@@ -4089,6 +4090,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
    REAL , DIMENSION(ims:ime, kms:kme, jms:jme, n_nba_mij), INTENT(INOUT) &
    :: nba_mij
+
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT) :: tf_wth
 
    REAL , DIMENSION( ims:ime, kms:kme, jms:jme), INTENT(IN   )   :: rho
    REAL , DIMENSION( ims:ime, jms:jme), INTENT(INOUT)            :: hfx,  &
@@ -4273,6 +4276,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
    CALL vertical_diffusion_s( rt_tendf, config_flags, var_mix, xkhv, &
                               dn, dnw, rdz, rdzw, fnm, fnp, rho,     &
                               .false.,                               &
+                              .true.,                                &
+                              tf_wth,                                &
                               ids, ide, jds, jde, kds, kde,          &
                               ims, ime, jms, jme, kms, kme,          &
                               its, ite, jts, jte, kts, kte          )
@@ -4308,6 +4313,7 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
 
        cpm = cp * (1. + 0.8 * moist(i,kts,j,P_QV))
        heat_flux = hfx(i,j)/cpm
+       tf_wth(i,kts,j) = hfx(i,j)/(cpm*rho(i,kts,j))
        if(config_flags%use_theta_m == 1)THEN
          rt_tendf(i,kts,j)=rt_tendf(i,kts,j)  &
              -g*heat_flux*(1.+rvovrd*moist(i,kts,j,P_QV))/dnw(kts) &
@@ -4335,6 +4341,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                               xkhv,                                 &
                               dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
                               .true.,                               &
+                              .false.,                              &
+                              tf_wth,                               &
                               ids, ide, jds, jde, kds, kde,         &
                               ims, ime, jms, jme, kms, kme,         &
                               its, ite, jts, jte, kts, kte         )
@@ -4372,6 +4380,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      xkhv,                                &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,   &
                                      .false.,                             &
+                                     .false.,                             &
+                                     tf_wth,                              &
                                      ids, ide, jds, jde, kds, kde,        &
                                      ims, ime, jms, jme, kms, kme,        &
                                      its, ite, jts, jte, kts, kte        )
@@ -4415,6 +4425,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      xkhv,                               &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,  &
                                      .false.,                            &
+                                     .false.,                            &
+                                     tf_wth,                             &
                                      ids, ide, jds, jde, kds, kde,       &
                                      ims, ime, jms, jme, kms, kme,       &
                                      its, ite, jts, jte, kts, kte         )
@@ -4431,6 +4443,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      xkhv,                                 &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
                                      .false.,                              &
+                                     .false.,                              &
+                                     tf_wth,                               &
                                      ids, ide, jds, jde, kds, kde,         &
                                      ims, ime, jms, jme, kms, kme,         &
                                      its, ite, jts, jte, kts, kte         )
@@ -4448,6 +4462,8 @@ SUBROUTINE vertical_diffusion_2   ( ru_tendf, rv_tendf, rw_tendf, rt_tendf,   &
                                      xkhv,                                 &
                                      dn, dnw, rdz, rdzw, fnm, fnp, rho,    &
                                      .false.,                              &
+                                     .false.,                              &
+                                     tf_wth,                               &
                                      ids, ide, jds, jde, kds, kde,         &
                                      ims, ime, jms, jme, kms, kme,         &
                                      its, ite, jts, jte, kts, kte         )
@@ -4789,6 +4805,8 @@ END SUBROUTINE vertical_diffusion_w_2
 SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
                                  dn, dnw, rdz, rdzw, fnm, fnp, rho,       &
                                  doing_tke,                               &
+                                 doing_theta,                             &
+                                 tf_wth,                                  &
                                  ids, ide, jds, jde, kds, kde,            &
                                  ims, ime, jms, jme, kms, kme,            &
                                  its, ite, jts, jte, kts, kte            )
@@ -4804,7 +4822,7 @@ SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
                                             ims, ime, jms, jme, kms, kme, &
                                             its, ite, jts, jte, kts, kte
 
-   LOGICAL,         INTENT(IN   ) ::        doing_tke
+   LOGICAL,         INTENT(IN   ) ::        doing_tke, doing_theta
 
    REAL , DIMENSION( kms:kme ) ,                 INTENT(IN   ) ::    fnm
    REAL , DIMENSION( kms:kme ) ,                 INTENT(IN   ) ::    fnp
@@ -4820,6 +4838,7 @@ SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
                                                                      rdz, &
                                                                     rdzw, &
                                                                      rho
+   REAL , DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT) :: tf_wth
 ! LOCAL VARS
 
    INTEGER :: i, j, k, ktf
@@ -4871,6 +4890,9 @@ SUBROUTINE vertical_diffusion_s( tendency, config_flags, var, xkhv,       &
    DO k = kts+1,ktf
    DO i = i_start, i_end
       xkxavg(i,k,j)=fnm(k)*xkhv(i,k,j)+fnp(k)*xkhv(i,k-1,j)
+      IF (doing_theta) THEN
+         tf_wth(i,k,j) = -xkxavg(i,k,j)*(var(i,k,j)-var(i,k-1,j))*rdz(i,k,j)
+      END IF
       xkxavg(i,k,j)=xkxavg(i,k,j)*(fnm(k)*rho(i,k,j)+fnp(k)*rho(i,k-1,j))
       H3(i,k,j)=-xkxavg(i,k,j)*(var(i,k,j)-var(i,k-1,j))*rdz(i,k,j)
    ENDDO

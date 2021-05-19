@@ -643,9 +643,9 @@ CONTAINS
    CASE(convrad, seabreeze2d_x)
    IF (stretch_grid) THEN ! read eta_levels
      DO k=1, kde
-      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
-                                (1.-exp(-1./z_scale))
-!      grid%znw(k) = model_config_rec%eta_levels(k)
+!      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
+!                                (1.-exp(-1./z_scale))
+      grid%znw(k) = model_config_rec%eta_levels(k)
      ENDDO
      
  ! Check the value of the first and last eta level for our domain,
