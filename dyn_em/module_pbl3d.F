@@ -2405,14 +2405,14 @@
       j_end = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      if (config_flags%open_xs .or. config_flags%specified .or. &
-          config_flags%nested) i_start = Max (ids + 1, its)
-      if (config_flags%open_xe .or. config_flags%specified .or. &
-          config_flags%nested) i_end = Min (ide - 1, ite)
-      if (config_flags%open_ys .or. config_flags%specified .or. &
-          config_flags%nested) j_start = Max (jds + 1, jts)
-      if (config_flags%open_ye .or. config_flags%specified .or. &
-          config_flags%nested) j_end = Min (jde - 2, jte)
+!      if (config_flags%open_xs .or. config_flags%specified .or. &
+!          config_flags%nested) i_start = Max (ids + 1, its)
+!      if (config_flags%open_xe .or. config_flags%specified .or. &
+!          config_flags%nested) i_end = Min (ide - 1, ite)
+!      if (config_flags%open_ys .or. config_flags%specified .or. &
+!          config_flags%nested) j_start = Max (jds + 1, jts)
+!      if (config_flags%open_ye .or. config_flags%specified .or. &
+!          config_flags%nested) j_end = Min (jde - 2, jte)
 
         ! Calc flux at u point in the faces
       do j = j_start, j_end
@@ -2490,14 +2490,14 @@
       j_end = jte
       ktf = Min (kte, kde - 1)
 
-      if (config_flags%open_xs .or. config_flags%specified .or. &
-          config_flags%nested) i_start = Max (ids + 1, its)
-      if (config_flags%open_xe .or. config_flags%specified .or. &
-          config_flags%nested) i_end   = Min (ide - 2, ite)
-      if (config_flags%open_ys .or. config_flags%specified .or. &
-          config_flags%nested) j_start = Max (jds + 1, jts)
-      if (config_flags%open_ye .or. config_flags%specified .or. &
-          config_flags%nested) j_end   = Min (jde - 1, jte)
+!      if (config_flags%open_xs .or. config_flags%specified .or. &
+!          config_flags%nested) i_start = Max (ids + 1, its)
+!      if (config_flags%open_xe .or. config_flags%specified .or. &
+!          config_flags%nested) i_end   = Min (ide - 2, ite)
+!      if (config_flags%open_ys .or. config_flags%specified .or. &
+!          config_flags%nested) j_start = Max (jds + 1, jts)
+!      if (config_flags%open_ye .or. config_flags%specified .or. &
+!          config_flags%nested) j_end   = Min (jde - 1, jte)
 
         ! Calc flux at v points in the faces
       do j = j_start, j_end
@@ -2573,14 +2573,14 @@
       j_end = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      if (config_flags%open_xs .or. config_flags%specified .or. &
-        config_flags%nested) i_start = Max (ids + 1, its)
-      if (config_flags%open_xe .or. config_flags%specified .or. &
-        config_flags%nested) i_end = Min (ide - 2, ite)
-      if (config_flags%open_ys .or. config_flags%specified .or. &
-        config_flags%nested) j_start = Max (jds + 1, jts)
-      if (config_flags%open_ye .or. config_flags%specified .or. &
-        config_flags%nested) j_end = Min (jde - 2, jte)
+!      if (config_flags%open_xs .or. config_flags%specified .or. &
+!        config_flags%nested) i_start = Max (ids + 1, its)
+!      if (config_flags%open_xe .or. config_flags%specified .or. &
+!        config_flags%nested) i_end = Min (ide - 2, ite)
+!      if (config_flags%open_ys .or. config_flags%specified .or. &
+!        config_flags%nested) j_start = Max (jds + 1, jts)
+!      if (config_flags%open_ye .or. config_flags%specified .or. &
+!        config_flags%nested) j_end = Min (jde - 2, jte)
 
         ! Calc flux at mass points
       do j = j_start, j_end
@@ -2647,14 +2647,14 @@
       j_end   = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      if (config_flags%open_xs .or. config_flags%specified .or. &
-        config_flags%nested) i_start = Max (ids + 1, its)
-      if (config_flags%open_xe .or. config_flags%specified .or. &
-        config_flags%nested) i_end   = Min (ide - 2, ite)
-      if (config_flags%open_ys .or. config_flags%specified .or. &
-        config_flags%nested) j_start = Max (jds + 1, jts)
-      if (config_flags%open_ye .or. config_flags%specified .or. &
-        config_flags%nested) j_end   = Min (jde - 2, jte)
+!      if (config_flags%open_xs .or. config_flags%specified .or. &
+!        config_flags%nested) i_start = Max (ids + 1, its)
+!      if (config_flags%open_xe .or. config_flags%specified .or. &
+!        config_flags%nested) i_end   = Min (ide - 2, ite)
+!      if (config_flags%open_ys .or. config_flags%specified .or. &
+!        config_flags%nested) j_start = Max (jds + 1, jts)
+!      if (config_flags%open_ye .or. config_flags%specified .or. &
+!        config_flags%nested) j_end   = Min (jde - 2, jte)
 
       do j = j_start, j_end
         do k = kts + 1, ktf
@@ -2722,14 +2722,14 @@
       j_end   = Min (jte, jde - 1)
       ktf = Min (kte, kde - 1)
 
-      if (config_flags%open_xs .or. config_flags%specified .or. &
-        config_flags%nested) i_start = Max (ids + 1, its)
-      if (config_flags%open_xe .or. config_flags%specified .or. &
-        config_flags%nested) i_end   = Min (ide - 2, ite)
-      if (config_flags%open_ys .or. config_flags%specified .or. &
-        config_flags%nested) j_start = Max (jds + 1, jts)
-      if (config_flags%open_ye .or. config_flags%specified .or. &
-        config_flags%nested) j_end   = Min (jde - 2, jte)
+!      if (config_flags%open_xs .or. config_flags%specified .or. &
+!        config_flags%nested) i_start = Max (ids + 1, its)
+!      if (config_flags%open_xe .or. config_flags%specified .or. &
+!        config_flags%nested) i_end   = Min (ide - 2, ite)
+!      if (config_flags%open_ys .or. config_flags%specified .or. &
+!        config_flags%nested) j_start = Max (jds + 1, jts)
+!      if (config_flags%open_ye .or. config_flags%specified .or. &
+!        config_flags%nested) j_end   = Min (jde - 2, jte)
 
         ! First layer
       do j = j_start, j_end
@@ -5700,6 +5700,19 @@
       j_start = jts
       j_end   = MIN(jte,jde-1)
 
+!      IF ( config_flags%open_xs .or. config_flags%specified .or. &
+!           config_flags%nested) i_start = MAX(ids+1,its)
+!      IF ( config_flags%open_xe .or. config_flags%specified .or. &
+!           config_flags%nested) i_end   = MIN(ide-2,ite)
+!      IF ( config_flags%open_ys .or. config_flags%specified .or. &
+!           config_flags%nested) j_start = MAX(jds+1,jts)
+!      IF ( config_flags%open_ye .or. config_flags%specified .or. &
+!           config_flags%nested) j_end   = MIN(jde-2,jte)
+
+        !!! Diffusion !!!
+      call Calc_q_sq_vertical_diffusion (N_PBL3D, q_sq_vdiff_tend, q_sq_tend, l_master_at_face, q_sq_prog, q_sq, &
+          fnm, fnp, dnw, rdz, rdzw, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
+
       IF ( config_flags%open_xs .or. config_flags%specified .or. &
            config_flags%nested) i_start = MAX(ids+1,its)
       IF ( config_flags%open_xe .or. config_flags%specified .or. &
@@ -5709,15 +5722,16 @@
       IF ( config_flags%open_ye .or. config_flags%specified .or. &
            config_flags%nested) j_end   = MIN(jde-2,jte)
 
-        !!! Diffusion !!!
-      call Calc_q_sq_vertical_diffusion (N_PBL3D, q_sq_vdiff_tend, q_sq_tend, l_master_at_face, q_sq_prog, q_sq, &
-          fnm, fnp, dnw, rdz, rdzw, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
-
       if ( config_flags%pbl3d_opt .gt. 1 ) then
         call Calc_q_sq_horizontal_diffusion (N_PBL3D, q_sq_hdiff_tend, q_sq_tend, l_master_at_face, q_sq_prog, q_sq, &
             msftx, msfty, msfux, msfvy, fnm, fnp, dn, dnw, zx, zy, rdx, rdy, rdz, rdzw, cf1, cf2, cf3, &
             ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte, i_start, i_end, j_start, j_end, ktf)
       end if
+
+      i_start = its
+      i_end   = MIN(ite,ide-1)
+      j_start = jts
+      j_end   = MIN(jte,jde-1)
 
         !!! Shear !!!
       if ( config_flags%pbl3d_opt .lt. 2 ) then

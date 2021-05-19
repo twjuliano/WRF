@@ -213,6 +213,20 @@ CONTAINS
            QV1D(i)=QV3D(i,1,j)
            P1D(i) =P3D(i,1,j)
            T1D(i) =T3D(i,1,j)
+!!! TWJ
+           IF(I .GT. ide/3.)THEN
+             ZNT(I,J)=(0.2/2.)*(tanh((i-(ide)/3.)/2.) + 1.)
+!             ZNT(I,J)=0.2*(tanh(1000.*(i-(ids+ide-2)/2.)/DX + 1.))
+           ELSE
+             ZNT(I,J)=0.0001
+           ENDIF
+
+
+!           IF(XLAND(I,J).LT.1.5)THEN
+!             ZNT(I,J)=0.2
+!           ELSE
+!             ZNT(I,J)=0.0001
+!           ENDIF
         ENDDO
 
         !  Sending array starting locations of optional variables may cause
@@ -449,7 +463,7 @@ CONTAINS
       DO 60 I=its,ite
         E1=SVP1*EXP(SVP2*(TGDSA(I)-SVPT0)/(TGDSA(I)-SVP3))                       
 !  for land points QSFC can come from previous time step
-        if(xland(i).gt.1.5.or.qsfc(i).le.0.0)QSFC(I)=EP2*E1/(PSFC(I)-E1)                                                 
+        if(xland(i).gt.1.5.or.qsfc(i).le.0.0)QSFC(I)=0.0 !EP2*E1/(PSFC(I)-E1)                                                 
 ! QGH CHANGED TO USE LOWEST-LEVEL AIR TEMP CONSISTENT WITH MYJSFC CHANGE
 ! Q2SAT = QGH IN LSM
         E1=SVP1*EXP(SVP2*(T1D(I)-SVPT0)/(T1D(I)-SVP3))                       
@@ -486,10 +500,14 @@ CONTAINS
         GZ1OZ0(I)=ALOG((ZA(I)+ZNT(I))/ZNT(I))   ! log((z+z0)/z0)                                     
         GZ2OZ0(I)=ALOG((2.+ZNT(I))/ZNT(I))      ! log((2+z0)/z0)                           
         GZ10OZ0(I)=ALOG((10.+ZNT(I))/ZNT(I))    ! log((10+z0)z0)                    
+!!! TWJ
         IF((XLAND(I)-1.5).GE.0)THEN                                            
+!          print *, 'ZNT over sea 1 = ', ZNT(I)
           ZL=ZNT(I)                                                            
         ELSE                                                                     
-          ZL=0.01                                                                
+!          print *, 'i, ZNT over land 1 = ', i, ZNT(I-1), ZNT(I)
+          ZL=ZNT(I)
+!          ZL=0.01                                                                
         ENDIF                                                                    
         WSPD(I)=SQRT(UX(I)*UX(I)+VX(I)*VX(I))                        
 
@@ -677,7 +695,14 @@ CONTAINS
 !                                                                                
       DO 330 I=its,ite
         DTG=THX(I)-THGB(I)                                                   
+!!! TWJ
         PSIX=GZ1OZ0(I)-PSIM(I)                                                   
+!        IF(I .GT. ide/2.)THEN
+!           PSIX=0.5*0.007*(tanh(1000.*(i-(ids+ide)/2.)/(10.*DX) + 1.))
+!           PSIX=0.007
+!        ELSE
+!           PSIX=0.0
+!        ENDIF
         PSIX10=GZ10OZ0(I)-PSIM10(I)
 
 !     LOWER LIMIT ADDED TO PREVENT LARGE FLHC IN SOIL MODEL
@@ -689,7 +714,9 @@ CONTAINS
         IF((XLAND(I)-1.5).GE.0)THEN                                            
           ZL=ZNT(I)                                                            
         ELSE                                                                     
-          ZL=0.01                                                                
+!!! TWJ
+          ZL=ZNT(I)
+!          ZL=0.01                                                                
         ENDIF                                                                    
 !
         PSIQ=ALOG(KARMAN*UST(I)*ZA(I)/XKA+ZA(I)/ZL)-pq(I)
@@ -972,34 +999,36 @@ CONTAINS
         IF((XLAND(I)-1.5).GE.0)THEN                                            
 !         ZNT(I)=CZO*UST(I)*UST(I)/G+OZO                                   
 ! Since V3.7 (ref: EC Physics document for Cy36r1)
-          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
+!!! TWJ
+!          ZNT(I)=CZO*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
 ! V3.9: Add limit as in isftcflx = 1,2
-          ZNT(I)=MIN(ZNT(I),2.85e-3)
+!          ZNT(I)=MIN(ZNT(I),2.85e-3)
 ! COARE 3.5 (Edson et al. 2013)
 !         CZC = 0.0017*WSPD(I)-0.005
 !         CZC = min(CZC,0.028)
 !         ZNT(I)=CZC*UST(I)*UST(I)/G+0.11*1.5E-5/UST(I)
 ! AHW: change roughness length, and hence the drag coefficients Ck and Cd
-          IF ( PRESENT(ISFTCFLX) ) THEN
-             IF ( ISFTCFLX.NE.0 ) THEN
+!          IF ( PRESENT(ISFTCFLX) ) THEN
+!             IF ( ISFTCFLX.NE.0 ) THEN
 !               ZNT(I)=10.*exp(-9.*UST(I)**(-.3333))
 !               ZNT(I)=10.*exp(-9.5*UST(I)**(-.3333))
 !               ZNT(I)=ZNT(I) + 0.11*1.5E-5/AMAX1(UST(I),0.01)
 !               ZNT(I)=0.011*UST(I)*UST(I)/G+OZO
 !               ZNT(I)=MAX(ZNT(I),3.50e-5)
 ! AHW 2012:
-                ZW  = MIN((UST(I)/1.06)**(0.3),1.0)
-                ZN1 = 0.011*UST(I)*UST(I)/G + OZO
-                ZN2 = 10.*exp(-9.5*UST(I)**(-.3333)) + &
-                       0.11*1.5E-5/AMAX1(UST(I),0.01)
-                ZNT(I)=(1.0-ZW) * ZN1 + ZW * ZN2
-                ZNT(I)=MIN(ZNT(I),2.85e-3)
-                ZNT(I)=MAX(ZNT(I),1.27e-7)
-             ENDIF
-          ENDIF
+!                ZW  = MIN((UST(I)/1.06)**(0.3),1.0)
+!                ZN1 = 0.011*UST(I)*UST(I)/G + OZO
+!                ZN2 = 10.*exp(-9.5*UST(I)**(-.3333)) + &
+!                       0.11*1.5E-5/AMAX1(UST(I),0.01)
+!                ZNT(I)=(1.0-ZW) * ZN1 + ZW * ZN2
+!                ZNT(I)=MIN(ZNT(I),2.85e-3)
+!                ZNT(I)=MAX(ZNT(I),1.27e-7)
+!             ENDIF
+!          ENDIF
           ZL = ZNT(I)
         ELSE
-          ZL = 0.01
+          ZL = ZNT(I)
+!          ZL = 0.01
         ENDIF                                                                    
         FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/DENOMQ(I)
 !       FLQC(I)=RHOX(I)*MAVAIL(I)*UST(I)*KARMAN/(   &
@@ -1024,36 +1053,75 @@ CONTAINS
      ENDIF
 
       DO 370 I=its,ite
-        QFX(I)=FLQC(I)*(QSFC(I)-QX(I))                                     
-        QFX(I)=AMAX1(QFX(I),0.)                                            
+!!! TWJ
+        QFX(I)=0.0
+!        QFX(I)=FLQC(I)*(QSFC(I)-QX(I))                                     
+!        QFX(I)=AMAX1(QFX(I),0.)                                            
         LH(I)=XLV*QFX(I)
   370 CONTINUE                                                                 
                                                                                 
 !-----COMPUTE SURFACE HEAT FLUX:                                                 
 !                                                                                
-  390 CONTINUE                                                                 
+  390 CONTINUE
+!      ! To replicate PAJ simulations !
+!      DO 400 I=its,ite
+!        IF(I .GT. (ids+ide)/2.)THEN
+!          HFX(I)=320.
+!        ELSE
+!          HFX(I)=160.
+!        ENDIF
+
+!!      ! TWJ homogeneous hfx !
+!      DO 400 I=its,ite
+!          HFX(I)=279.
+ 
+!!      ! TWJ heterogeneous hfx !
+!      DO 400 I=its,ite
+!        IF(I .GT. (ids+ide)/2.)THEN
+!          HFX(I)=279.
+!        ELSE
+!          HFX(I)=139.5
+!        ENDIF
+
+      ! TWJ sea breeze hfx !
       DO 400 I=its,ite
-        IF(XLAND(I)-1.5.GT.0.)THEN                                           
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I)) 
+         IF(I .GT. ide/3.)THEN
+           HFX(I)=(145./2.)*(tanh((i-(ide)/3.)/2.) + 1.)
+!           HFX(I)=280.*(tanh(1000.*(i-(ids+ide)/2.)/DX + 1.))
+!           print *, i, HFX(I)
+!           HFX(I)=279.
+         ELSE
+           HFX(I)=0.0
+         ENDIF
+!         print *, i, HFX(I)
+
+      ! Original code !
+!!      DO 400 I=its,ite
+!!        IF(XLAND(I)-1.5.GT.0.)THEN                                           
+!!          HFX(I)=FLHC(I)*(THGB(I)-THX(I)) 
 !         IF ( PRESENT(ISFTCFLX) ) THEN
 !            IF ( ISFTCFLX.NE.0 ) THEN
 ! AHW: add dissipative heating term (commented out in 3.6.1)
 !               HFX(I)=HFX(I)+RHOX(I)*USTM(I)*USTM(I)*WSPDI(I)
 !            ENDIF
 !         ENDIF 
-        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
-          HFX(I)=AMAX1(HFX(I),-250.)                                       
-        ENDIF                                                                  
+!!        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
+!!          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
+!!          HFX(I)=AMAX1(HFX(I),-250.)                                       
+!!        ENDIF                                                                  
   400 CONTINUE                                                                 
 
   405 CONTINUE                                                                 
          
       DO I=its,ite
          IF((XLAND(I)-1.5).GE.0)THEN
+!           print *, 'ZNT over sea 2 = ', ZNT(I)
            ZL=ZNT(I)
          ELSE
-           ZL=0.01
+!!! TWJ
+!           print *, 'i, ZNT over land 2 = ', i, ZNT(I)
+           ZL=ZNT(I)
+!           ZL=0.01
          ENDIF
 !v3.1.1
 !         CHS(I)=UST(I)*KARMAN/(ALOG(KARMAN*UST(I)*ZA(I) &

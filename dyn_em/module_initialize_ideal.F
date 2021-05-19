@@ -131,6 +131,9 @@ CONTAINS
    INTEGER :: iter_loop
    INTEGER :: xs , xe , ys , ye
    REAL :: mtn_ht
+   REAL :: hp, hx, Sx, dist, xext, xext_scale, x1, x2, x3, x4, x5, x6, x7, x8 !!! TWJ
+   REAL, ALLOCATABLE, DIMENSION(:,:) :: ht_50m, interp_ht
+   INTEGER :: istart, iend, jstart, jend, jmid, dx_ratio, npasses
    REAL :: randx       ! for LES
    INTEGER :: ks, ke, id
 
@@ -176,6 +179,8 @@ CONTAINS
 
    END SELECT
 
+   allocate(interp_ht(its:ite-1, jts:jte-1))
+
    CALL model_to_grid_config_rec ( grid%id , model_config_rec , config_flags )
 
   ideal_constants: SELECT CASE ( model_config_rec%ideal_case )
@@ -194,9 +199,11 @@ CONTAINS
 
 
    stretch_grid = .true.
-   delt = 0.
+   delt = 0.5
 !   z_scale = .40
-   z_scale = 8000./config_flags%ztop
+!!! TWJ
+   z_scale = 2.4
+!   z_scale = 8000./config_flags%ztop
    pi = 2.*asin(1.0)
    write(6,*) ' pi is ',pi
    nxc = (ide-ids)/2
@@ -256,15 +263,18 @@ CONTAINS
 
   CASE (seabreeze2d_x)
 
+!!! TWJ
+!   stretch_grid = .true.
    stretch_grid = .true.
-   delt = 6.
+   delt = 0.5
 !   z_scale = .40
-   z_scale = 8000./config_flags%ztop
+   z_scale = 2.4
+!   z_scale = 8000./config_flags%ztop
    pi = 2.*asin(1.0)
    write(6,*) ' pi is ',pi
    nxc = (ide-ids)/2
-   nyc = jde/2
-   icm = ide/2
+   nyc = (jde-jds)/2
+   icm = ide/3 + 1
 ! lm is the half width of the land in terms of grid points
    lm = 25
    write(6,*) 'lm,icm-lm,icm+lm = ', lm,icm-lm,icm+lm
@@ -505,20 +515,23 @@ CONTAINS
          grid%sina(i,j)     = 0.
          grid%cosa(i,j)     = 1.
          grid%e(i,j)        = 0.
-         grid%f(i,j)        = 0.
-         grid%xlat(i,j)     = 30.
-         grid%xlong(i,j)     = 0.
+!!! TWJ
+!         grid%f(i,j)        = 0.
+         grid%f(i,j)        = 1.e-4
+!         grid%xlat(i,j)     = 30.
+!         grid%xlong(i,j)     = 0.
 ! Hard-wire the ocean-land configuration
-        if (i .ge. (icm-lm) .and. i .lt. (icm+lm)) then
+        if (i .ge. icm) then
+!        if (i .ge. (icm-lm) .and. i .lt. (icm+lm)) then
          grid%xland(i,j)     = 1.
          grid%lu_index(i,j)  = 18
-         grid%tsk(i,j) = 280.0
-         grid%tmn(i,j) = 280.0
+         grid%tsk(i,j) = 296.0
+         grid%tmn(i,j) = 296.0
         else
          grid%xland(i,j)     = 2.
          grid%lu_index(i,j)  = 16
-         grid%tsk(i,j) = 287.0
-         grid%tmn(i,j) = 280.0
+         grid%tsk(i,j) = 288.0
+         grid%tmn(i,j) = 288.0
         end if
       END DO
    END DO
@@ -618,8 +631,9 @@ CONTAINS
    CASE(hill2d_x, quarter_ss, squall2d_x, squall2d_y, grav2d_x, b_wave)
    IF (stretch_grid) THEN ! exponential stretch for eta (nearly constant dz)
      DO k=1, kde
-      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
-                                (1.-exp(-1./z_scale))
+!      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
+!                                (1.-exp(-1./z_scale))
+      grid%znw(k) = model_config_rec%eta_levels(k)
      ENDDO
    ELSE
      DO k=1, kde
@@ -629,7 +643,9 @@ CONTAINS
    CASE(convrad, seabreeze2d_x)
    IF (stretch_grid) THEN ! read eta_levels
      DO k=1, kde
-      grid%znw(k) = model_config_rec%eta_levels(k)
+      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
+                                (1.-exp(-1./z_scale))
+!      grid%znw(k) = model_config_rec%eta_levels(k)
      ENDDO
      
  ! Check the value of the first and last eta level for our domain,
@@ -891,11 +907,94 @@ CONTAINS
 
   ideal_terrain: SELECT CASE ( model_config_rec%ideal_case )
   CASE (hill2d_x)
-  DO j=jts,jte
-  DO i=its,ite  
-    grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
+  dx_ratio = int(config_flags%dx/50.)
+  print *, 'dx_ratio = ', dx_ratio, (ite-1)*dx_ratio, (jte-1)*dx_ratio
+  allocate(ht_50m((ite-1)*dx_ratio, (jte-1)*dx_ratio))
+
+  xext = (ite-1)*config_flags%dx
+  xext_scale = xext/40000.
+  hp = 1500.
+  Sx = 9000.*xext_scale
+  x1 = 500.*xext_scale
+  x2 = (xext/4.)-(500.*xext_scale)
+  x3 = (xext/4.)+(500.*xext_scale)
+  x4 = (xext/2.)-(500.*xext_scale)
+  x5 = (xext/2.)+(500.*xext_scale)
+  x6 = (3.*xext/4.)-(500.*xext_scale)
+  x7 = (3.*xext/4.)+(500.*xext_scale)
+  x8 = xext-(500.*xext_scale)
+  print *, 'x vals =', xext, x1, x2, x3, x4, x5, x6, x7, x8
+!  x2 = 9500.
+!  x3 = 10500.
+!  x4 = 19500.
+!  x5 = 20500.
+!  x6 = 29500.
+!  x7 = 30500.
+!  x8 = 39500.
+  if (config_flags%dx == 50.0) then
+    istart = its
+    iend = ite
+    jstart = jts
+    jend = jte
+  else
+    istart = 1
+    iend = (ite-1)*dx_ratio
+    jstart = 1
+    jend = (jte-1)*dx_ratio
+  end if
+
+  DO j=jstart,jend
+  DO i=istart,iend
+!!! TWJ - From Schmidli & Rotunno
+!!! Do high-resolution (50m) terrain first
+    dist = (i-1)*50.0 + 25.0
+    if (dist <= x1) then
+      hx = 0
+    else if (dist > x1 .and. dist < x2) then
+      hx = 0.5 - 0.5*cos(pi*(dist-x1)/Sx)
+    else if (dist >= x2 .and. dist <= x3) then
+       hx = 1
+    else if (dist > x3 .and. dist < x4) then
+       hx = 0.5 + 0.5*cos(pi*(dist-x3)/Sx)
+    else if (dist >= x4 .and. dist <= x5) then
+       hx = 0
+    else if (dist > x5 .and. dist < x6) then
+       hx = 0.5 - 0.5*cos(pi*(dist-x5)/Sx)
+    else if (dist >= x6 .and. dist <= x7) then
+       hx = 1
+    else if (dist > x7 .and. dist < x8) then
+       hx = 0.5 + 0.5*cos(pi*(dist-x7)/Sx)
+    else if (dist >= x8) then
+       hx = 0
+    end if
+    ht_50m(i,j) = hp*hx
+
+!    grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
 !!    grid%ht(i,j) = hm1*exp(-(( float(i-icm)/xa1)**2))   &
 !!               *( (cos(pii*float(i-icm)/xal1))**2 )
+
+  ENDDO
+  ENDDO
+
+  jmid = floor(jte/2.)
+  !npasses = ceiling(xext_scale*dx_ratio/16.)
+  npasses = 1
+  print *, 'npasses = ', npasses
+  if (config_flags%dx .ne. 50.0) then
+    call four_pt_average_twj(config_flags%dx, dx_ratio, ht_50m, istart, iend, jstart, jend, jmid, &
+                             interp_ht, its, ite-1, jts, jte-1)
+!    call smth_desmth_twj(interp_ht, its, ite-1, jts, jte-1, 1)
+!    call one_two_one_twj(interp_ht, its, ite-1, jts, jte-1, npasses)
+  end if
+
+  DO j=jts,jte
+  DO i=its,ite
+    if (config_flags%dx == 50.0) then
+      grid%ht(i,j) = ht_50m(i,j)
+    else
+      grid%ht(i,j) = interp_ht(i,jmid)
+    end if
+
     grid%phb(i,1,j) = g*grid%ht(i,j)
     grid%php(i,1,j) = 0.
     grid%ph0(i,1,j) = grid%phb(i,1,j)
@@ -1399,6 +1498,124 @@ CONTAINS
         IF(RAD <= 1.) THEN
 !          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
            grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.1 *randx
+           grid%t_2(i,k,j)=grid%t_1(i,k,j)
+           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
+           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
+                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
+           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
+        ENDIF
+      ENDDO
+
+!  rebalance hydrostatically
+
+
+      DO  kk  = 2,kte
+        k = kk - 1
+        grid%ph_1(i,kk,j) = grid%ph_1(i,kk-1,j) - (grid%dnw(kk-1))*(       &
+                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,kk-1,j)+ &
+                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,kk-1,j)  )
+
+        grid%ph_2(i,kk,j) = grid%ph_1(i,kk,j)
+        grid%ph0(i,kk,j) = grid%ph_1(i,kk,j) + grid%phb(i,kk,j)
+      ENDDO
+
+    ENDDO
+  ENDDO
+
+  CASE (seabreeze2d_x)
+!  thermal perturbation to kick off convection
+
+  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
+  write(6,*) ' delt for perturbation ',delt
+
+! For LES, change the initial random perturbations
+! For 2D test, call randx outside I-loop
+! For 3D runs, call randx inside both I-J loops
+
+  DO J = jts, min(jde-1,jte)
+!   yrad = config_flags%dy*float(j-nyc)/10000.
+    yrad = 0.
+    DO I = its, min(ide-1,ite)
+!     xrad = config_flags%dx*float(i-nxc)/10000.
+      xrad = 0.
+      call random_number (randx)
+      randx = randx - 0.5
+!     DO K = 1, kte-1
+    if (i .ge. icm) then
+      DO K = 1, 4
+
+!  No bubbles for LES!
+!  put in preturbation theta (bubble) and recalc density.  note,
+!  the mass in the column is not changing, so when theta changes,
+!  we recompute density and geopotential
+
+!       zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
+!                  +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
+!       zrad = (zrad-1500.)/1500.
+        zrad = 0.
+        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
+        IF(RAD <= 1.) THEN
+!          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
+           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ delt *randx
+           grid%t_2(i,k,j)=grid%t_1(i,k,j)
+           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
+           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
+                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
+           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
+        ENDIF
+      ENDDO
+     endif
+
+!  rebalance hydrostatically
+
+
+      DO  kk  = 2,kte
+        k = kk - 1
+        grid%ph_1(i,kk,j) = grid%ph_1(i,kk-1,j) - (grid%dnw(kk-1))*(       &
+                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,kk-1,j)+ &
+                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,kk-1,j)  )
+
+        grid%ph_2(i,kk,j) = grid%ph_1(i,kk,j)
+        grid%ph0(i,kk,j) = grid%ph_1(i,kk,j) + grid%phb(i,kk,j)
+      ENDDO
+
+    ENDDO
+  ENDDO
+
+  CASE (hill2d_x)
+!  thermal perturbation to kick off convection
+
+  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
+  write(6,*) ' delt for perturbation ',delt
+
+! For LES, change the initial random perturbations
+! For 2D test, call randx outside I-loop
+! For 3D runs, call randx inside both I-J loops
+
+  DO J = jts, min(jde-1,jte)
+!   yrad = config_flags%dy*float(j-nyc)/10000.
+    yrad = 0.
+    DO I = its, min(ide-1,ite)
+!     xrad = config_flags%dx*float(i-nxc)/10000.
+      xrad = 0.
+      call random_number (randx)
+      randx = randx - 0.5
+!     DO K = 1, kte-1
+      DO K = 1, 4
+
+!  No bubbles for LES!
+!  put in preturbation theta (bubble) and recalc density.  note,
+!  the mass in the column is not changing, so when theta changes,
+!  we recompute density and geopotential
+
+!       zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
+!                  +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
+!       zrad = (zrad-1500.)/1500.
+        zrad = 0.
+        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
+        IF(RAD <= 1.) THEN
+!          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
+           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ delt *randx
            grid%t_2(i,k,j)=grid%t_1(i,k,j)
            qvf = 1. + rvovrd*moist(i,k,j,P_QV)
            grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
@@ -2248,5 +2465,205 @@ CONTAINS
 
  end subroutine read_input_jet
 
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! Name: four_pt_average
+   !
+   ! Purpose: Average of four surrounding grid point values. Modified by TWJ
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   subroutine four_pt_average_twj(dx, dx_ratio, array, start_x, end_x, start_y, end_y, jmid, &
+                               interp_array, start_xi, end_xi, start_yi, end_yi)
+
+      implicit none
+
+      ! Arguments
+      real, intent(in) :: dx
+      integer, intent(in) :: start_x, start_y, start_xi, start_yi, jmid
+      integer, intent(in) :: end_x, end_y, end_xi, end_yi, dx_ratio
+      real, dimension(start_x:end_x, start_y:end_y), &
+          intent(in) :: array
+      ! Return values
+      real, dimension(start_xi:end_xi, start_yi:end_yi), &
+          intent(out) :: interp_array
+
+      ! Local variables
+      integer :: i, j, imx, imy, ifx, ify, icx, icy
+      real :: fmfm, fxfy, fxcy, cxfy, cxcy, dist
+
+      fmfm = 1.0
+      fxfy = 1.0
+      fxcy = 1.0
+      cxfy = 1.0
+      cxcy = 1.0
+
+!      do j = start_yi,end_yi
+!        interp_array(start_xi,j) = array(start_x,jmid)
+!        interp_array(end_xi,j) = array(end_x,jmid)
+!        print *, 'j, array(start_x,1), array(end_x,1), interp_array(start_xi,j), interp_array(end_xi,j) = ', j, array(start_x,1), array(end_x,1), interp_array(start_xi,j), interp_array(end_xi,j)
+!      end do
+
+!       interp_array(start_xi,start_yi:end_yi) = 0.0
+!       interp_array(end_xi,start_yi:end_yi) = 0.0
+
+!      do j = start_yi,end_yi
+        do i = start_xi,end_xi
+          dist = (dx/2.) + ((i-1)*dx)
+          imx = ceiling((dist/50.))
+!          ifx = ((i-1) * dx_ratio) + 1
+!          icx = ((i-1) * dx_ratio) + 2
+!          imy = 100 !j * dx_ratio
+!          ify = 100 !(j * dx_ratio) - 1
+!          icy = 100 !(j * dx_ratio) + 1
+
+          if (mod(dist,2.) == 0) then
+            interp_array(i,start_yi:end_yi) = 0.5*(array(imx,jmid)+array(imx+1,jmid))
+          else
+            interp_array(i,start_yi:end_yi) = array(imx,jmid)
+          end if
+
+!          interp_array(i,start_yi:end_yi) = (fmfm * array(imx, imy) + &
+!                               fxfy * array(ifx, ify) + &
+!                               fxcy * array(ifx, icy) + &
+!                               cxfy * array(icx, ify) + &
+!                               cxcy * array(icx, icy) ) / (fmfm + fxfy + fxcy + cxfy + cxcy)
+
+!          print *, 'i, j, imx, ifx, icx, imy, ify, icy = ', i, j, imx, ifx, icx, imy, ify, icy
+!          print *, 'array(imx, imy), array(ifx, ify), array(ifx, icy), array(icx, ify), array(icx, icy) = ', array(imx, imy), array(ifx, ify), array(ifx, icy), array(icx, ify), array(icx, icy), interp_array(i,j)
+        end do
+!      end do
+
+   end subroutine four_pt_average_twj
+
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! Name: smth_desmth_twj
+   !
+   ! Purpose: Apply the smoother-desmoother from the MM5 program TERRAIN
+   !   (found in smther.F) to array. Modified by TWJ
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   subroutine smth_desmth_twj(array, start_x, end_x, start_y, end_y, npass)
+
+      implicit none
+
+      ! Arguments
+      integer, intent(in) :: start_x, start_y
+      integer, intent(in) :: end_x, end_y
+      integer, intent(in) :: npass
+!      real, intent(in) :: msgval
+      real, dimension(start_x:end_x, start_y:end_y), intent(inout) :: array
+
+      ! Local variables
+      integer :: ix, iy, iz, ipass
+      real :: S
+      real, pointer, dimension(:,:) :: scratch, orig_array
+
+      allocate(scratch(start_x+1:end_x-1, start_y:end_y))
+      allocate(orig_array(start_x:end_x, start_y:end_y))
+
+      orig_array = array
+
+      do ipass=1,npass
+
+         !
+         ! Smoothing pass
+         !
+         do iy=start_y,end_y
+            do ix=start_x+1,end_x-1
+               scratch(ix,iy) = 0.5*array(ix,iy) + 0.25*(array(ix-1,iy)+array(ix+1,iy))
+            end do
+         end do
+
+!         S = 0.50
+         do iy=start_y+1,end_y-1
+            do ix=start_x+1,end_x-1
+!               array(ix,iy) = array(ix,iy) + (S/2.)*(1.-S)* &
+!                              (array(ix-1,iy) + array(ix,iy+1) + array(ix+1,iy) + array(ix,iy-1) - 4.*array(ix,iy)) + &
+!                              (S*S/4.)*(array(ix-1,iy+1) + array(ix+1,iy+1) + array(ix+1,iy-1) + array(ix-1,iy-1) - 4.*array(ix,iy))
+               array(ix,iy) = 0.5*scratch(ix,iy) + 0.25*(scratch(ix,iy-1)+scratch(ix,iy+1))
+            end do
+         end do
+
+         !
+         ! Desmoothing pass
+         !
+         do iy=start_y,end_y
+            do ix=start_x+1,end_x-1
+               scratch(ix,iy) = 1.52*array(ix,iy) - 0.26*(array(ix-1,iy)+array(ix+1,iy))
+            end do
+         end do
+
+!         S = -0.52
+         do iy=start_y+1,end_y-1
+            do ix=start_x+1,end_x-1
+!               array(ix,iy) = array(ix,iy) + (S/2.)*(1.-S)* &
+!                              (array(ix-1,iy) + array(ix,iy+1) + array(ix+1,iy) + array(ix,iy-1) - 4.*array(ix,iy)) + &
+!                              (S*S/4.)*(array(ix-1,iy+1) + array(ix+1,iy+1) + array(ix+1,iy-1) + array(ix-1,iy-1) - 4.*array(ix,iy))
+               array(ix,iy) = 1.52*scratch(ix,iy) - 0.26*(scratch(ix,iy-1)+scratch(ix,iy+1))
+            end do
+         end do
+
+      end do
+
+      ! Remove artificially negative values
+      do iy=start_y,end_y
+         do ix=start_x,end_x
+            if (array(ix,iy) < 0. .and. orig_array(ix,iy) >= 0.) then
+               array(ix,iy) = orig_array(ix,iy)
+            end if
+         end do
+      end do
+
+      deallocate(scratch)
+      deallocate(orig_array)
+
+   end subroutine smth_desmth_twj
+
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! Name: one_two_one
+   !
+   ! Purpose: Apply the 1-2-1 smoother from the MM5 program TERRAIN
+   !   (found in smth121.F) to array.
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   subroutine one_two_one_twj(array, start_x, end_x, start_y, end_y, npass)
+
+      implicit none
+
+      ! Arguments
+      integer, intent(in) :: start_x, start_y
+      integer, intent(in) :: end_x, end_y
+      integer, intent(in) :: npass
+!      real, intent(in) :: msgval
+      real, dimension(start_x:end_x, start_y:end_y), intent(inout) :: array
+
+      ! Local variables
+      integer :: ix, iy, iz, ipass
+      real :: S
+      real, pointer, dimension(:,:) :: scratch, orig_array
+
+      allocate(scratch(start_x+1:end_x-1, start_y:end_y))
+      allocate(orig_array(start_x:end_x, start_y:end_y))
+
+      orig_array = array
+
+      do ipass=1,npass
+
+         do iy=start_y,end_y
+            do ix=start_x+1,end_x-1
+               scratch(ix,iy) = 0.50*array(ix,iy)+0.25*(array(ix-1,iy)+array(ix+1,iy))
+            end do
+         end do
+
+         do iy=start_y+1,end_y-1
+            do ix=start_x+1,end_x-1
+               array(ix,iy) = 0.50*scratch(ix,iy)+0.25*(scratch(ix,iy-1)+scratch(ix,iy+1))
+             end do
+          end do
+
+      end do
+
+      deallocate(scratch)
+
+   end subroutine one_two_one_twj
 
 END MODULE module_initialize_ideal
