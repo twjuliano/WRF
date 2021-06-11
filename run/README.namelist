@@ -1506,13 +1506,16 @@ The following are for observation nudging:
                                                  -1 = Mellor-Yamada 1D PBL w/ PBL approximation - vertical mixing handled by
                                                        parameterization and horizontal mixing handled by Smagorinsky.
                                                        PBL scheme must be turned off (bl_pbl_physics = 0). Must be used with
-                                                       diff_opt = 1 or = 2 and km_opt = 4.
+                                                       diff_opt = 1 or = 2 and km_opt = 4. Terrain-following coordinate
+                                                       system (hybrid_opt = 0) must be selected.
                                                   1 = Mellor-Yamada 3D PBL w/ PBL approximation - vertical and horizontal mixing
                                                        handled by parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
-                                                       Must be used with diff_opt = 0.
+                                                       Must be used with diff_opt = 0. Terrain-following coordinate
+                                                       system (hybrid_opt = 0) must be selected.
                                                   2 = Mellor-Yamada 3D PBL - vertical and horizontal mixing handled by 
                                                        parameterization. PBL scheme must be turned off (bl_pbl_physics = 0).
-                                                       Must be used with diff_opt = 0.
+                                                       Must be used with diff_opt = 0. Terrain-following coordinate
+                                                       system (hybrid_opt = 0) must be selected.
  pbl3d_sfc_opt(max_dom)              = 0,       ! 3D PBL surface flux option
                                                   0 = off (default)
                                                   1 = constant values for similarity functions
