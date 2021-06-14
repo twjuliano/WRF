@@ -9479,11 +9479,10 @@ real gpu_device  :: zcd(tncol,ngptsw,nlayers+1)  , zcu(tncol,ngptsw,nlayers+1)
     
 ! Recompute original s.s.a. to test for conservative solution
 
-               denom = (1. - (1. - zw) * (zg / (1. - zg))**2)
-               if (abs(denom).eq.0.0) then
-                  denom = 1.0E-30
-               end if
-               zwo= zw / denom
+               zwo = 0.
+               denom = 1.
+               if (zg .ne. 1.) denom = (1. - (1. - zw) * (zg / (1. - zg))**2)
+               if (zw .gt. 0. .and. denom .ne. 0.) zwo = zw / denom
     
                if (zwo >= zwcrit) then
 ! Conservative scattering
@@ -11216,6 +11215,7 @@ write(0,*)'pfu ',shape( pfu)          ! upwelling flux (W/m2)
 !------------------------------------------------------------------
       SUBROUTINE RRTMG_SWRAD_FAST(                                &
                        rthratensw,                                &
+                       rthratenswc,                               &
                        swupt, swuptc, swdnt, swdntc,              &
                        swupb, swupbc, swdnb, swdnbc,              &
 !                      swupflx, swupflxc, swdnflx, swdnflxc,      &
@@ -11280,7 +11280,8 @@ write(0,*)'pfu ',shape( pfu)          ! upwelling flux (W/m2)
                                                            rho3d
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme )                 , &
-         INTENT(INOUT)  ::                            RTHRATENSW
+         INTENT(INOUT)  ::                            RTHRATENSW,&
+                                                      RTHRATENSWC
 
    REAL, DIMENSION( ims:ime, jms:jme )                          , &
          INTENT(INOUT)  ::                                   GSW, &
@@ -12515,6 +12516,8 @@ write(0,*)'pfu ',shape( pfu)          ! upwelling flux (W/m2)
          do k=kts,kte 
             tten1d(k) = swhr(icol,k)/86400.
             rthratensw(i,k,j) = tten1d(k)/pi3d(i,k,j)
+            tten1d(k) = swhrc(icol,k)/86400.
+            rthratenswc(i,k,j) = tten1d(k)/pi3d(i,k,j)
          enddo
 
       else

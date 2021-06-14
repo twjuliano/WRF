@@ -2574,12 +2574,10 @@
             zgamma4= 1._rb - zgamma3
     
 ! Recompute original s.s.a. to test for conservative solution
-            denom = (1._rb - (1._rb - zw) * (zg / (1._rb - zg))**2)
-	    ! Code added to avoid 'divide by zero' error in zwo computation
-            if (abs(denom).eq.0.0_rb) then
-               denom = 1.0E-30_rb
-            end if
-            zwo= zw / denom
+            zwo = 0._rb
+            denom = 1._rb
+            if (zg .ne. 1._rb) denom = (1._rb - (1._rb - zw) * (zg / (1._rb - zg))**2)
+            if (zw .gt. 0._rb .and. denom .ne. 0._rb) zwo = zw / denom
 
             if (zwo >= zwcrit) then
 ! Conservative scattering
@@ -3291,6 +3289,10 @@
                                                          !   Dimensions: (nlayers,ngptsw)
 
 !jm not thread safe      hvrtau = '$Revision: 1.3 $'
+
+! Initialize sfluxzen to 0.0 to prevent junk values when nlayers = laytrop
+
+      sfluxzen(:) = 0.0
 
 ! Calculate gaseous optical depth and planck fractions for each spectral band.
 
@@ -9919,6 +9921,7 @@ CONTAINS
 !------------------------------------------------------------------
    SUBROUTINE RRTMG_SWRAD(                                        &
                        rthratensw,                                &
+                       rthratenswc,                               &
                        swupt, swuptc, swuptcln, swdnt, swdntc, swdntcln, &
                        swupb, swupbc, swupbcln, swdnb, swdnbc, swdnbcln, &
 !                      swupflx, swupflxc, swdnflx, swdnflxc,      &
@@ -9962,8 +9965,9 @@ CONTAINS
                        tauaer3d_sw,ssaaer3d_sw,asyaer3d_sw,       & ! jararias 2013/11
                        swddir, swddni, swddif,                    & ! jararias 2013/08
                        swdownc, swddnic, swddirc,                 & ! PAJ
-                       xcoszen,yr,julian                          & ! jararias 2013/08
-                                                                  )
+                       xcoszen,yr,julian,                          & ! jararias 2013/08
+                       obscur                                     & ! amontornes-bcodina 2015/09 solar eclipses
+                       )
 !------------------------------------------------------------------
    IMPLICIT NONE
 !------------------------------------------------------------------
@@ -9987,7 +9991,8 @@ CONTAINS
                                                            rho3d
 
    REAL, DIMENSION( ims:ime, kms:kme, jms:jme )                 , &
-         INTENT(INOUT)  ::                            RTHRATENSW
+         INTENT(INOUT)  ::                            RTHRATENSW, &
+                                                      RTHRATENSWC
 
    REAL, DIMENSION( ims:ime, jms:jme )                          , &
          INTENT(INOUT)  ::                                   GSW, &
@@ -10126,6 +10131,10 @@ CONTAINS
          OPTIONAL, INTENT(OUT) ::                                 &
                                SWUPFLX,SWUPFLXC,                  &
                                SWDNFLX,SWDNFLXC
+
+! amontornes-bcodina 2015/09 solar eclipses
+!  obscur --> degree of obscuration for solar eclipses prediction (2D)
+                               REAL, DIMENSION(ims:ime,jms:jme), INTENT(IN) :: obscur	
 
 !  LOCAL VARS
  
@@ -10638,8 +10647,11 @@ CONTAINS
 
 ! Set cosine of solar zenith angle
          coszen(ncol) = coszrs
-! Set solar constant
-         scon = solcon
+! Set solar constant (original) amontornes-bcodina 2015/09
+!         scon = solcon
+! amontornes-bcodina 2015/09 solar eclipses
+         scon = solcon*(1-obscur(i,j))
+         
 ! For Earth/Sun distance adjustment in RRTMG
 !         dyofyr = julday
 !         adjes = 0.0 
@@ -11216,6 +11228,8 @@ CONTAINS
          do k=kts,kte 
             tten1d(k) = swhr(ncol,k)/86400.
             rthratensw(i,k,j) = tten1d(k)/pi3d(i,k,j)
+            tten1d(k) = swhrc(ncol,k)/86400.
+            rthratenswc(i,k,j) = tten1d(k)/pi3d(i,k,j)
          enddo
       else
          if (present(swupt)) then 

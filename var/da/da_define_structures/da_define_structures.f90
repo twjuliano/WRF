@@ -8,7 +8,11 @@ module da_define_structures
    !  Note: Please acknowledge author/institute in work that uses this code.
    !---------------------------------------------------------------------------
 
+#if (WRF_CHEM != 1)
    use module_domain, only: vp_type, x_type
+#else
+   use module_domain, only: vp_type, x_type, xchem_type
+#endif
 
    use da_control, only : anal_type_randomcv, stdout, max_fgat_time, &
       vert_corr, global, vert_evalue,print_detail_be, maxsensor, &
@@ -18,10 +22,17 @@ module da_define_structures
       sound, synop, pilot, satem, geoamv, polaramv, airep, gpspw, gpsref, gpseph, &
       metar, ships, ssmi_rv, ssmi_tb, ssmt1, ssmt2, qscat, profiler, buoy, bogus, &
       mtgirs, tamdar, tamdar_sfc, pseudo, radar, radiance, airsr, sonde_sfc, rain, &
+#if (WRF_CHEM == 1)
+      chemic_surf, chem_cv_options, &
+#endif
       trace_use_dull,comm, num_pseudo
    use da_control, only : cloud_cv_options, use_cv_w
    use da_control, only : pseudo_uvtpq
    use da_control, only : use_radar_rhv, use_radar_rqv
+
+#if (WRF_CHEM == 1)
+   use module_state_description, only : PARAM_FIRST_SCALAR, num_chem, num_chemic_surf
+#endif
 
    use da_tracing, only : da_trace_entry, da_trace_exit
    use da_tools_serial, only : da_array_print
@@ -216,8 +227,11 @@ module da_define_structures
       real, pointer           :: model_t(:)
       real, pointer           :: model_rho(:)
       real, pointer           :: model_qrn(:)
+      real, pointer           :: model_qcl(:)
+      real, pointer           :: model_qci(:)
       real, pointer           :: model_qsn(:)
       real, pointer           :: model_qgr(:)
+      real, pointer           :: model_zmm(:)  ! reflectivity in mm^6 mm^-3
       real                    :: model_ps
 
       real                  , pointer :: height   (:) ! Height in m
@@ -225,6 +239,11 @@ module da_define_structures
 
       type (field_type)     , pointer :: rv       (:) ! Radial Velocity
       type (field_type)     , pointer :: rf       (:) ! Reflectivity
+      type (field_type)     , pointer :: zmm      (:) ! Reflectivity (mm^6 mm^-3)
+      type (field_type)     , pointer :: rcl      (:) !
+      type (field_type)     , pointer :: rci      (:) !
+      real                  , pointer :: rclo     (:)
+      real                  , pointer :: rcio     (:)
       type (field_type)     , pointer :: rrn      (:) => null() ! qrain
       type (field_type)     , pointer :: rsn      (:) => null() ! qsnow
       type (field_type)     , pointer :: rgr      (:) => null() ! qgraupel
@@ -298,6 +317,24 @@ module da_define_structures
       type (model_loc_type)                   :: loc
       type (rain_each_type)                   :: each(1)
    end type rain_single_level_type
+
+#if (WRF_CHEM == 1)
+
+   type chemic_surf_type
+      real                    :: height         ! Height in m
+      integer                 :: height_qc      ! Height QC
+      real                    :: zk             ! k-coordinates
+      type (field_type), pointer    :: chem(:)       ! Concentration measurement for multiple species and platforms
+   end type chemic_surf_type
+
+   type singl_level_type
+      type (info_type)                        :: info
+      type (model_loc_type)                   :: loc
+!!!      type (chemic_surf_type)                 :: each
+      type (field_type), pointer    :: chem(:)
+   end type singl_level_type
+
+#endif
 
    ! [3.2] Innovation vector structure:
 
@@ -500,7 +537,16 @@ module da_define_structures
       real,    pointer     :: bgerr(:) 
       real,    pointer     :: vtox(:,:)
    end type varbc_type
-   
+   type clddet_geoir_type
+     real  :: RTCT, RFMFT, TEMPIR, terr_hgt
+     real  :: tb_stddev_10, tb_stddev_13,tb_stddev_14
+     real  :: CIRH2O
+     !real, allocatable :: CIRH2O(:,:,:)
+   end type clddet_geoir_type   
+   type superob_type
+     real, allocatable :: tb_obs(:,:)
+     type(clddet_geoir_type), allocatable :: cld_qc(:)
+   end type superob_type
    type cv_index_type
       integer              :: ts
       integer              :: nclouds
@@ -536,10 +582,12 @@ module da_define_structures
       integer, pointer     :: cloud_flag(:,:)
       integer, pointer     :: cloudflag(:)
       integer, pointer     :: rain_flag(:)
+      real, allocatable    :: cloud_frac(:)
       real,    pointer     :: satzen(:) 
       real,    pointer     :: satazi(:) 
       real,    pointer     :: solzen(:) 
       real,    pointer     :: solazi(:) 
+      real,    pointer     :: tropt(:)  !! Tropopause temperature, K.
       real,    pointer     :: t(:,:)
       real,    pointer     :: q(:,:)
       real,    pointer     :: mr(:,:)
@@ -615,11 +663,12 @@ module da_define_structures
       real,    pointer     :: ice_coverage(:)
       real,    pointer     :: snow_coverage(:)
       integer, pointer     :: crtm_climat(:) ! CRTM only
-
+      integer              :: superob_width = 1
       type (varbc_info_type)        :: varbc_info
       type (varbc_type),pointer     :: varbc(:)
       type (cv_index_type), pointer :: cv_index(:)
       type (infa_type)              :: info
+      type (superob_type), allocatable :: superob(:,:)
    end type instid_type
 
    type iv_type
@@ -652,6 +701,9 @@ module da_define_structures
       real    :: bogus_ef_u, bogus_ef_v, bogus_ef_t, bogus_ef_p, bogus_ef_q, bogus_ef_slp
       real    :: airsr_ef_t,  airsr_ef_q
       real    :: rain_ef_r
+#if (WRF_CHEM == 1)
+      real    :: chemic_surf_ef
+#endif
 
       type (infa_type) :: info(num_ob_indexes)
 
@@ -684,6 +736,9 @@ module da_define_structures
       type (tamdar_type)   , pointer :: tamdar(:)
       type (synop_type)    , pointer :: tamdar_sfc(:)
       type (rain_type)     , pointer :: rain(:)
+#if (WRF_CHEM == 1)
+      type (chemic_surf_type), pointer :: chemic_surf(:)
+#endif
 
       type (varbc_tamdar_type) :: varbc_tamdar
 
@@ -720,10 +775,15 @@ module da_define_structures
       type (bad_info_type)       :: rrn
       type (bad_info_type)       :: rsn
       type (bad_info_type)       :: rgr
+      type (bad_info_type)       :: rcl
+      type (bad_info_type)       :: rci
       type (bad_info_type)       :: rqv
       type (bad_info_type)       :: slp
       type (bad_info_type)       :: rad
       type (bad_info_type)       :: rain
+#if (WRF_CHEM == 1)
+      type (bad_info_type)       :: chemic_surf
+#endif
    end type bad_data_type
 
    type count_obs_number_type
@@ -859,6 +919,8 @@ module da_define_structures
    type residual_radar_type
       real, pointer :: rv(:)                    ! rv
       real, pointer :: rf(:)                    ! rf
+      real, pointer :: rcl(:)                   ! 
+      real, pointer :: rci(:)                   !
       real, pointer :: rrn(:) => null()         ! rrain
       real, pointer :: rsn(:) => null()         ! rsnow
       real, pointer :: rgr(:) => null()         ! rgraupel
@@ -875,6 +937,17 @@ module da_define_structures
    type residual_rain_type
       real :: rain
    end type residual_rain_type 
+
+#if (WRF_CHEM == 1)
+   type residual_chem_surf_type
+      real, pointer :: chem(:)       ! Concentration measurement for multiple species
+!      real :: bc
+!      real :: oc
+!      real :: co
+!      real :: co2
+!      real :: ch4
+   end type residual_chem_surf_type
+#endif
 
    type y_type
       integer :: nlocal(num_ob_indexes)
@@ -911,6 +984,9 @@ module da_define_structures
       type (residual_radar_type),    pointer :: radar(:)
       type (residual_instid_type),   pointer :: instid(:)
       type (residual_rain_type),     pointer :: rain(:)
+#if (WRF_CHEM == 1)
+      type (residual_chem_surf_type),pointer :: chemic_surf(:)
+#endif
    end type y_type
 
    !--------------------------------------------------------------------------
@@ -958,10 +1034,13 @@ module da_define_structures
       real                :: qscat_u, qscat_v
       real                :: profiler_u, profiler_v
       real                :: buoy_u, buoy_v, buoy_t, buoy_p, buoy_q
-      real                :: radar_rv, radar_rf, radar_rrn,radar_rsn,radar_rgr,radar_rqv
+      real                :: radar_rv, radar_rf, radar_rrn,radar_rsn,radar_rgr,radar_rcl,radar_rci,radar_rqv
       real                :: bogus_u, bogus_v, bogus_t, bogus_q, bogus_slp
       real                :: airsr_t, airsr_q
       real                :: rain_r
+#if (WRF_CHEM == 1)
+      real                :: chemic_surf
+#endif
       type(jo_type_rad), pointer       :: rad(:)
    end type jo_type
 
@@ -1019,6 +1098,9 @@ module da_define_structures
       integer :: size3l      ! Size of CV array of 3rd variable lbc error.
       integer :: size4l      ! Size of CV array of 4th variable lbc error.
       integer :: size5l      ! Size of CV array of 5th variable lbc error.
+#if (WRF_CHEM == 1)
+      integer,allocatable :: sizechemic (:) ! Size of CV array of chem variable error.
+#endif
    end type cv_type
 
    type qhat_type
@@ -1063,6 +1145,15 @@ module da_define_structures
 
       type (be_subtype) :: alpha
       real*8, pointer     :: pb_vert_reg(:,:,:)
+#if (WRF_CHEM == 1)
+      !integer           :: ncv_mz_chem      ! number of variables for cv_mz
+      !integer, pointer  :: cv_mz_chem(:)    ! array to hold mz of each cv
+
+      type (be_subtype),allocatable :: v12(:)     ! Chem initial condition scaling factor CVs
+      integer           :: ncv_mz_chemic      ! number of variables for cv_mz
+      integer, pointer  :: cv_mz_chemic(:)    ! array to hold mz of each cv
+
+#endif
 
       ! Control variable space errors:
       type (cv_type)    :: cv
@@ -1119,15 +1210,25 @@ contains
 #include "da_allocate_obs_info.inc"
 #include "da_allocate_observations.inc"
 #include "da_allocate_observations_rain.inc"
+#if (WRF_CHEM == 1)
+#include "da_allocate_observations_chem_sfc.inc"
+#endif
 #include "da_allocate_y.inc"
 #include "da_allocate_y_radar.inc"
 #include "da_allocate_y_rain.inc"
+#if (WRF_CHEM == 1)
+#include "da_allocate_y_chem_sfc.inc"
+#include "da_deallocate_y_chem_sfc.inc"
+#endif
 #include "da_deallocate_background_errors.inc"
 #include "da_deallocate_observations.inc"
 #include "da_deallocate_y.inc"
 #include "da_zero_x.inc"
 #include "da_zero_y.inc"
 #include "da_zero_vp_type.inc"
+#if (WRF_CHEM == 1)
+#include "da_zero_xchem_type.inc"
+#endif
 #include "da_initialize_cv.inc"
 #include "da_random_seed.inc"
 #include "da_gauss_noise.inc"

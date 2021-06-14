@@ -48,6 +48,7 @@
     INTEGER skebs_on, sppt_on, rand_perturb_on, nens,ISEED_SKEBS,ISEED_SPPT,ISEED_RAND_PERT
     INTEGER skebs_vertstruc, sppt_vertstruc, rand_pert_vertstruc
     INTEGER LMINFORC,LMAXFORC,KMINFORC,KMAXFORC,LMINFORCT,LMAXFORCT,KMINFORCT,KMAXFORCT
+    INTEGER NTASKS_X, NTASKS_Y
     REAL    gridpt_stddev_rand_pert,stddev_cutoff_rand_pert,timescale_rand_pert
     REAL    gridpt_stddev_sppt,stddev_cutoff_sppt,timescale_sppt
     REAL    tot_backscat_psi,tot_backscat_t,REXPONENT_PSI,REXPONENT_T,ZTAU_PSI,ZTAU_T
@@ -157,8 +158,9 @@
     call nl_get_aer_ssa_val        ( grid%id,  aer_ssa_val        )
     call nl_get_aer_asy_val        ( grid%id,  aer_asy_val        )
     call nl_get_sf_lake_physics    ( grid%id,  sf_lake_physics    )
-    ! PSH
-    call nl_get_use_bathymetry      ( grid%id,  use_bathymetry      )
+    call nl_get_use_bathymetry     ( grid%id,  use_bathymetry     ) ! PSH
+    call nl_get_nproc_x            ( 1,        ntasks_x           )
+    call nl_get_nproc_y            ( 1,        ntasks_y           )
 
 #if (EM_CORE == 1)
     dt = grid%dt
@@ -174,7 +176,7 @@
     call nl_get_feedback             ( 1      ,  feedback             )
     call nl_get_smooth_option        ( 1      ,  smooth_option        )
     call nl_get_swrad_scat           ( 1      ,  swrad_scat           )
-    call nl_get_sf_urban_physics     ( 1      ,  sf_urban_physics     )
+    call nl_get_sf_urban_physics     ( grid%id,  sf_urban_physics     )
     call nl_get_w_damping            ( 1      ,  w_damping            )
 
 #if (EM_CORE == 1)
@@ -606,7 +608,7 @@ endif
 #endif
 
 ! added by SYHA (09-19-2014)
-#if ((WRF_CHEM == 1) &&  (EM_CORE == 1))
+#if ((WRF_CHEM == 1) &&  (EM_CORE == 1) && (DA_CORE != 1))
      IF ( config_flags%perturb_chem_bdy .NE. 0 ) THEN
           CALL wrf_put_dom_ti_integer( fid, 'PERTURB_CHEM_BDY', config_flags%perturb_chem_bdy, 1, ierr )
      END IF
@@ -797,9 +799,14 @@ endif
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_SOIL',    config_flags%opt_soil    , 1 , ierr )
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_PEDO',    config_flags%opt_pedo    , 1 , ierr )
         CALL wrf_put_dom_ti_integer   ( fid, 'OPT_CROP',    config_flags%opt_crop    , 1 , ierr )
+        CALL wrf_put_dom_ti_integer   ( fid, 'OPT_IRR',     config_flags%opt_irr     , 1 , ierr )
+        CALL wrf_put_dom_ti_integer   ( fid, 'OPT_IRRM',    config_flags%opt_irrm    , 1 , ierr )
       ENDIF
 
       CALL wrf_put_dom_ti_integer   ( fid, 'DFI_OPT',          config_flags%dfi_opt      , 1 , ierr )
+      CALL wrf_put_dom_ti_integer   ( fid, 'NTASKS_X',         ntasks_x                  , 1 , ierr )
+      CALL wrf_put_dom_ti_integer   ( fid, 'NTASKS_Y',         ntasks_y                  , 1 , ierr )
+      CALL wrf_put_dom_ti_integer   ( fid, 'NTASKS_TOTAL',     ntasks_x*ntasks_y         , 1 , ierr )
 
       ENDIF ! history_only
 
