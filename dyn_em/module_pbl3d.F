@@ -246,13 +246,13 @@
         ! Local
       integer :: i, j, k, i_start, i_end, j_start, j_end, k_start, k_end
 
-        ! Calculate indexes for u
+        ! Calculate indexes
       i_start = its
       i_end = ite
       j_start = jts
-      j_end = Min (jte, jde - 1)
+      j_end = jte
       k_start = kts
-      k_end = Min (kte, kde - 1)
+      k_end = kte
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -262,14 +262,6 @@
         ENDDO
       ENDDO
 
-        ! Calculate indexes for v
-      i_start = its
-      i_end = Min ( ite, ide - 1)
-      j_start = jts
-      j_end = jte
-      k_start = kts
-      k_end = Min (kte, kde - 1)
-
       DO j = j_start, j_end
         DO k = k_start, k_end
           DO i = i_start, i_end
@@ -278,14 +270,6 @@
         ENDDO
       ENDDO
 
-        ! Calculate indexes for w
-      i_start = its
-      i_end = Min ( ite, ide - 1)
-      j_start = jts
-      j_end = Min (jte, jde - 1)
-      k_start = kts
-      k_end = kte
-
       DO j = j_start, j_end
         DO k = k_start, k_end
           DO i = i_start, i_end
@@ -293,14 +277,6 @@
           ENDDO
         ENDDO
       ENDDO
-
-        ! Calculate indexes for theta/qv
-      i_start = its
-      i_end = Min ( ite, ide - 1)
-      j_start = jts
-      j_end = Min (jte, jde - 1)
-      k_start = kts
-      k_end = Min (kte, kde - 1)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -315,10 +291,10 @@
     end subroutine Zero_temp_tends
 
 
-    subroutine Update_wrf_tends_temp_state_and_zero_tends (ru_tendf, rv_tendf, rw_tendf, t_tendf, &
+    subroutine Update_wrf_tends_temp_state_and_zero_tends (config_flags, ru_tendf, rv_tendf, rw_tendf, t_tendf, &
               moist_tend, q_sq_tend, ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp, &
               u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp, dt, c1h, c2h, c1f, c2f, muu, muv, mut, &
-              ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                          !
@@ -333,6 +309,8 @@
 
       implicit none
 
+      type (grid_config_rec_type), intent (in) :: config_flags
+
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout)  :: ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend
       real, dimension (its:ite, kts:kte, jts:jte), intent (inout)  :: ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, &
                                                                       t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp
@@ -340,17 +318,17 @@
       real,                                        intent (in)     :: dt
       real, dimension (kms:kme),                   intent (in)     :: c1h, c2h, c1f, c2f
       real, dimension (ims:ime, jms:jme),          intent (in)     :: muu, muv, mut
-      integer,                                     intent (in)     :: ide, jde, kde,                &
+      integer,                                     intent (in)     :: ids, ide, jds, jde, kds, kde, &
                                                                       ims, ime, jms, jme, kms, kme, &
                                                                       its, ite, jts, jte, kts, kte
 
-      call Update_wrf_tends (ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend, &
+      call Update_wrf_tends (config_flags, ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend, &
           ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp, &
-          ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+          ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
-      call Update_temp_state (u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp, &
+      call Update_temp_state (config_flags, u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp, &
           ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp, &
-          dt, c1h, c2h, c1f, c2f, muu, muv, mut, ide, jde, kde, ims, ime, jms, jme, kms, kme,  &
+          dt, c1h, c2h, c1f, c2f, muu, muv, mut, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme,  &
           its, ite, jts, jte, kts, kte)
 
       call Zero_temp_tends (ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, &
@@ -359,9 +337,9 @@
     end subroutine Update_wrf_tends_temp_state_and_zero_tends
 
 
-    subroutine Update_wrf_tends (ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend, &
+    subroutine Update_wrf_tends (config_flags, ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend, &
               ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp, &
-              ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+              ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                       !
@@ -373,10 +351,12 @@
 
       implicit none
 
+      type (grid_config_rec_type), intent (in) :: config_flags
+
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout)  :: ru_tendf, rv_tendf, rw_tendf, t_tendf, moist_tend, q_sq_tend
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)     :: ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, &
                                                                       t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp
-      integer,                                     intent (in)     :: ide, jde, kde,                &
+      integer,                                     intent (in)     :: ids, ide, jds, jde, kds, kde, &
                                                                       ims, ime, jms, jme, kms, kme, &
                                                                       its, ite, jts, jte, kts, kte
 
@@ -391,6 +371,15 @@
       k_start = kts
       k_end = Min (kte, kde - 1)
 
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 1, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 2, jte)
+
       DO j = j_start, j_end
         DO k = k_start, k_end
           DO i = i_start, i_end
@@ -401,11 +390,20 @@
 
         ! Calculate indexes for v
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = jte
       k_start = kts
       k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 1, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -417,11 +415,20 @@
 
         ! Calculate indexes for w
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = Min (jte, jde - 1)
       k_start = kts
-      k_end = kte
+      k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 2, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -433,11 +440,20 @@
 
         ! Calculate indexes for theta/qv
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = Min (jte, jde - 1)
       k_start = kts
       k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+        config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+        config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+        config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+        config_flags%nested) j_end   = Min (jde - 2, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -452,9 +468,10 @@
     end subroutine Update_wrf_tends
 
 
-    subroutine Update_temp_state (u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp, &
+    subroutine Update_temp_state (config_flags, u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp, &
               ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp, &
-              dt, c1h, c2h, c1f, c2f, muu, muv, mut, ide, jde, kde, ims, ime, jms, jme, kms, kme, its, ite, jts, jte, kts, kte)
+              dt, c1h, c2h, c1f, c2f, muu, muv, mut, ids, ide, jds, jde, kds, kde, ims, ime, jms, jme, kms, kme, &
+              its, ite, jts, jte, kts, kte)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !                                                                       !
@@ -466,13 +483,15 @@
 
       implicit none
 
+      type (grid_config_rec_type), intent (in) :: config_flags
+
       real, dimension (ims:ime, kms:kme, jms:jme), intent (inout)  :: u_tmp, v_tmp, w_tmp, th_tmp, qv_tmp, rho_tmp, q_sq_tmp
       real, dimension (its:ite, kts:kte, jts:jte), intent (in)     :: ru_tendf_tmp, rv_tendf_tmp, rw_tendf_tmp, &
                                                                       t_tendf_tmp, moist_tend_tmp, q_sq_tend_tmp
       real,                                        intent (in)     :: dt
       real, dimension (kms:kme),                   intent (in)     :: c1h, c2h, c1f, c2f
       real, dimension (ims:ime, jms:jme),          intent (in)     :: muu, muv, mut 
-      integer,                                     intent (in)     :: ide, jde, kde, &
+      integer,                                     intent (in)     :: ids, ide, jds, jde, kds, kde, &
                                                                       ims, ime, jms, jme, kms, kme, &
                                                                       its, ite, jts, jte, kts, kte
 
@@ -487,6 +506,15 @@
       k_start = kts
       k_end = Min (kte, kde - 1)
 
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 1, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 2, jte)
+
       DO j = j_start, j_end
         DO k = k_start, k_end
           DO i = i_start, i_end
@@ -497,11 +525,20 @@
 
         ! Calculate indexes for v
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = jte
       k_start = kts
       k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 1, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -513,11 +550,20 @@
 
         ! Calculate indexes for w
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = Min (jte, jde - 1)
       k_start = kts
-      k_end = kte
+      k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+          config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+          config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+          config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+          config_flags%nested) j_end   = Min (jde - 2, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end
@@ -529,11 +575,20 @@
 
         ! Calculate indexes for theta/qv
       i_start = its
-      i_end = Min ( ite, ide - 1)
+      i_end = Min (ite, ide - 1)
       j_start = jts
       j_end = Min (jte, jde - 1)
       k_start = kts
       k_end = Min (kte, kde - 1)
+
+      if (config_flags%open_xs .or. config_flags%specified .or. &
+        config_flags%nested) i_start = Max (ids + 1, its)
+      if (config_flags%open_xe .or. config_flags%specified .or. &
+        config_flags%nested) i_end   = Min (ide - 2, ite)
+      if (config_flags%open_ys .or. config_flags%specified .or. &
+        config_flags%nested) j_start = Max (jds + 1, jts)
+      if (config_flags%open_ye .or. config_flags%specified .or. &
+        config_flags%nested) j_end   = Min (jde - 2, jte)
 
       DO j = j_start, j_end
         DO k = k_start, k_end

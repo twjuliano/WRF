@@ -1338,7 +1338,8 @@ BENCH_END(hor_diff_tim)
            !$OMP PARALLEL DO   &
            !$OMP PRIVATE ( ij )
            DO ij = 1 , grid%num_tiles
-             CALL Update_wrf_tends_temp_state_and_zero_tends (ru_tendf = ru_tendf, rv_tendf = rv_tendf, &
+             CALL Update_wrf_tends_temp_state_and_zero_tends (config_flags = config_flags, &
+                  ru_tendf = ru_tendf, rv_tendf = rv_tendf, &
                   rw_tendf = rw_tendf, t_tendf = t_tendf, moist_tend = moist_tend(:,:,:,P_QV), &
                   q_sq_tend = q_sq_prog_tend, &
                   ru_tendf_tmp = ru_tendf_tmp, rv_tendf_tmp = rv_tendf_tmp, &
@@ -1349,9 +1350,10 @@ BENCH_END(hor_diff_tim)
                   q_sq_tmp = grid%q_sq_tmp, &
                   dt = grid%dt, c1h = grid%c1h, c2h = grid%c2h, c1f = grid%c1f, &
                   c2f = grid%c2f, muu = grid%muu, muv = grid%muv, mut = grid%mut, &
-                  ide = ide, jde = jde, kde = kde, ims = ims, ime = ime, jms = jms, &
-                  jme = jme, kms = kms, kme = kme, its = grid%i_start(ij), &
-                  ite = grid%i_end(ij), jts = grid%j_start(ij), jte = grid%j_end(ij), &
+                  ids = ids, ide = ide, jds = jds, jde = jde, kds = kds, kde = kde, &
+                  ims = ims, ime = ime, jms = jms, jme = jme, kms = kms, kme = kme, &
+                  its = grid%i_start(ij), ite = grid%i_end(ij), &
+                  jts = grid%j_start(ij), jte = grid%j_end(ij), &
                   kts = k_start, kte = k_end)
            END DO
            !$OMP END PARALLEL DO
