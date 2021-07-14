@@ -429,13 +429,13 @@
          ! Calculates l0 (Eq. 72 MY74)
       do j = j_start, j_end
         do i = i_start, i_end
-          do k = kts, kte
+          do k = kts + 1, kte
             zup = 0.
             dlu(i, k, j) = z(i, kte, j) + dz(i, kte, j) - z(i, k, j) - dz(i, k, j)/2.
             zzz = 0.
             zup_inf = 0.
             beta = G_OVER_TREF      !Buoyancy coefficient
-            te = q_sq(i, k, j) / 2.
+            te = Max (q_sq(i, k, j) / 2., Q_SQ_MIN)
             do kk = k, kte - 1
               dzt = (dz(i, kk + 1, j) + dz(i, kk, j)) / 2.
               zup = zup - beta * th(i, k, j) * dzt
@@ -485,7 +485,7 @@
             end do
           end do
 
-          do k = kts, ktf
+          do k = kts + 1, ktf
             dlu(i, k, j) = max( dlu(i, k, j), 0.0 )
             dld(i, k, j) = max( min( dld(i, k, j), z(i, k, j) ), 0.0 )
             dls(i, k, j) = max( sqrt( dlu(i, k, j) * dld(i, k, j) ), 0.1 )
@@ -493,6 +493,8 @@
             l_master(i, k, j) = dlk(i, k, j)  ! turbulent length scale
             l_boulac(i, k, j) = dls(i, k, j)  ! dissipation length scale
           end do
+          l_master(i, kts, j) = 0.0
+          l_boulac(i, kts, j) = 0.0
           l_master(i, kte, j) = l_master(i, ktf, j)
           l_boulac(i, kte, j) = l_boulac(i, ktf, j)
         end do

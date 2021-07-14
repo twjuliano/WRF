@@ -1524,6 +1524,12 @@ The following are for observation nudging:
                                                   1 = Mellor-Yamada center of mass length scale (based on Blackadar) (default)
                                                   2 = Mellor-Yamada-Nakanishi-Niino length scale (original constants)
                                                   3 = BouLac length scale (based on Bougeault and LaCarrere, 1989)
+ pbl3d_constants                     = 'MY82'   ! 3D PBL set of model constants
+                                                  'MY82'   = Mellor-Yamada (1982) paper (default)
+                                                  'MY73'   = Mellor-Yamada (1973) paper
+                                                  'MY74'   = Mellor-Yamada (1974) paper
+                                                  'MYJ'    = MYJ PBL Scheme; Janjic (2002)
+                                                  'Boulac' = Derived from idealized, CBL LES simulations; recommended use with pbl3d_l_opt = 3
  pbl3d_nsteps(max_dom)               = 1,       ! 3D PBL number of parameterization substeps
  pbl3d_prog(max_dom)                 = 0,       ! 3D PBL closure level option
                                                   0 = Level 2 Mellor-Yamada model (diagnostic TKE) (default)

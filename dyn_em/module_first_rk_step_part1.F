@@ -996,6 +996,7 @@ BENCH_START(pbl_driver_tim)
       CALL pbl_driver(                                                              &
      &         AKHS=grid%akhs          ,AKMS=grid%akms                              &
      &        ,BL_PBL_PHYSICS=config_flags%bl_pbl_physics                           &
+     &        ,PBL3D_OPT=config_flags%pbl3d_opt                                     &
      &        ,WINDFARM_OPT=config_flags%windfarm_opt,power=grid%power              &
      &        ,BLDT=grid%bldt, CURR_SECS=curr_secs, ADAPT_STEP_FLAG=adapt_step_flag &
      &        ,BLDTACTTIME=grid%bldtacttime                               &  
